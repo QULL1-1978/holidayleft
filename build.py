@@ -232,6 +232,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <meta name="twitter:image" content="{SITE_URL}/og-image.png">
 {ld_json(path, crumbs)}
 <meta name="theme-color" content="#0b6b57">
+<meta name="msvalidate.01" content="07E77E2420E74B43C4CA521A5BFFC0DF">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
