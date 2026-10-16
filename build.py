@@ -32,7 +32,8 @@ API = "https://date.nager.at/api/v3"
 REFRESH = "--refresh" in sys.argv
 # Contact form: Web3Forms public access key (safe to keep in the repo) and/or a visible contact address.
 CONTACT_KEY = os.environ.get("CONTACT_KEY") or ""
-CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or ""
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or "hello@holidayleft.com"
+OWNER = os.environ.get("OWNER") or "3Sped OÜ"
 CONTACT_ON = bool(CONTACT_KEY or CONTACT_EMAIL)
 
 NOW_UTC = dt.datetime.now(dt.timezone.utc)
@@ -86,6 +87,13 @@ def region_for(c):
     pre = c["tz"].split("/")[0]
     return {"Europe": "Europe", "America": "Americas", "Asia": "Asia", "Africa": "Africa",
             "Australia": "Oceania", "Pacific": "Oceania"}.get(pre, "Asia")
+
+
+def email_link(addr):
+    """E-mail shown as text for scrapers; a script turns it into a mailto link in the browser."""
+    u, d = addr.split("@", 1)
+    return (f'<span class="eml" data-u="{esc(u)}" data-d="{esc(d)}">'
+            f'{esc(u)} [at] {esc(d.replace(".", " [dot] "))}</span>')
 
 
 def faq_html(items, heading="Frequently asked questions"):
@@ -207,7 +215,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
 <p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a></p></div>
-<p>© {YEAR} {esc(SITE_NAME)}</p>
+<p>© {YEAR} {esc(SITE_NAME)} · operated by {esc(OWNER)}</p>
 </footer>
 {data_html}
 <script src="/s.js" defer></script>
@@ -931,6 +939,7 @@ def build_static():
 <p>Travellers who want to know whether shops and offices are open, people who work with colleagues or customers in other countries, event planners, and anyone who wants to plan a long weekend.</p>
 <h2>Where the data comes from</h2>
 <p>Public holiday data comes from the open <a href="https://date.nager.at" rel="noopener">Nager.Date</a> project. The site is rebuilt every day. Read more about <a href="/methodology/">how the answers are calculated</a>.{contact_p}</p>
+<p>{n} is operated by {esc(OWNER)}, a company registered in Estonia.</p>
 <p>Holidays can be moved or added at short notice, so always confirm with an official government source before you plan around a date.</p>""",
                           None, [("Home", "/")]))
     add("/methodology/", layout("/methodology/", f"How {SITE_NAME} Works – Data and Methodology",
@@ -955,7 +964,7 @@ def build_static():
     add("/terms/", layout("/terms/", f"Terms of Use and Disclaimer | {SITE_NAME}",
                           f"Terms of use and disclaimer for {SITE_NAME}.",
                           f"""<h1>Terms of use and disclaimer</h1>
-<p>By using {n} you agree to these terms. If you do not agree, please do not use the site.</p>
+<p>{n} is operated by {esc(OWNER)} ("we", "us"). By using the site you agree to these terms. If you do not agree, please do not use the site.</p>
 <h2>Information only</h2>
 <p>Everything on this site is general information about public holidays and dates. We try to keep it accurate, but we make no promise that it is complete, current or free of errors. Do not rely on it alone for travel bookings, legal deadlines, payroll, contracts or other decisions with financial or legal consequences. Check an official government source first.</p>
 <h2>No liability</h2>
@@ -963,23 +972,24 @@ def build_static():
 <h2>Third-party content and links</h2>
 <p>The site links to other websites, for example the data source. We do not control them and are not responsible for their content. Advertising or affiliate links may be added in the future and will be marked as such.</p>
 <h2>Intellectual property</h2>
-<p>The design and text of {n} belong to its owner. The underlying public holiday data comes from the open Nager.Date project. Flag images come from the MIT-licensed flag-icons project. You may link to any page of the site freely.</p>
+<p>The design and text of {n} belong to {esc(OWNER)}. The underlying public holiday data comes from the open Nager.Date project. Flag images come from the MIT-licensed flag-icons project. You may link to any page of the site freely.</p>
 <h2>Acceptable use</h2>
 <p>Please do not overload the site with automated requests or try to disrupt it.</p>
 <h2>Changes</h2>
 <p>We may change these terms and the site at any time. The current version is always on this page.</p>""",
                           None, [("Home", "/")]))
+    captcha_note = ('<p>To keep automated spam out, the contact form uses the hCaptcha service. When you open the contact page, hCaptcha loads from its own servers and may process technical data such as your IP address and browser details, and may set cookies, to tell people from robots. It is loaded on the contact page only.</p>' if CONTACT_KEY else "")
     form_note = ' Messages sent with the contact form are delivered through the Web3Forms service, which processes the name, email address and message you enter so that we can read and answer them.' if CONTACT_KEY else ""
     add("/privacy/", layout("/privacy/", "Privacy Policy",
                             f"Privacy policy of {SITE_NAME}.",
                             f"""<h1>Privacy policy</h1>
-<p>{n} does not ask you to create an account and does not use advertising or analytics cookies at the moment.</p>
+<p>{n} is operated by {esc(OWNER)}, a company registered in Estonia, which is the controller of any personal data described on this page. {n} does not ask you to create an account and does not use advertising or analytics cookies at the moment.</p>
 <h2>What stays on your device</h2>
 <p>If you switch between light and dark mode, the site stores your choice in your browser's local storage on your own device. The site also reads your browser's language and time zone setting to preselect your country. Neither is sent to us.</p>
 <h2>Hosting</h2>
 <p>The site is hosted on GitHub Pages and its domain is managed through Cloudflare's DNS service. Like any web host, they may record technical data such as your IP address and the pages you request in their server logs.</p>
 <h2>Contact{" form" if CONTACT_KEY else ""}</h2>
-<p>If you write to us, we use your message and email address only to answer you.{form_note}</p>
+<p>If you write to us, we use your message and email address only to answer you.{form_note}</p>{captcha_note}
 <h2>Advertising and analytics</h2>
 <p>If advertising or analytics are added later, they may use cookies provided by third parties, and this page will name them and explain how to opt out before they are switched on.</p>
 <h2>Your rights</h2>
@@ -993,16 +1003,19 @@ def build_static():
 <input type="hidden" name="subject" value="{n} contact form">
 <input type="hidden" name="from_name" value="{n} website">
 <input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<input type="text" name="website" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true" value="">
 <label>Your name<input type="text" name="name" autocomplete="name" required maxlength="100"></label>
 <label>Email address<input type="email" name="email" autocomplete="email" required maxlength="150"></label>
 <label>Topic<select name="topic"><option>Correction to a date</option><option>Question</option><option>Suggestion</option><option>Advertising or partnership</option><option>Other</option></select></label>
 <label>Message<textarea name="message" rows="6" required minlength="10" maxlength="3000"></textarea></label>
 <label class="chk"><input type="checkbox" name="consent" value="yes" required><span>I agree that my message is processed to answer me, as described in the <a href="/privacy/">privacy policy</a>.</span></label>
+<div class="h-captcha" data-captcha="true"></div>
 <button class="pri" type="submit">Send message</button>
 <p id="cstatus" role="status" aria-live="polite"></p>
-</form>""")
+</form>
+<script src="https://web3forms.com/client/script.js" async defer></script>""")
         if CONTACT_EMAIL:
-            parts.append(f'<p>You can also write to <a href="mailto:{esc(CONTACT_EMAIL)}">{esc(CONTACT_EMAIL)}</a>.</p>')
+            parts.append(f'<p>{"You can also write" if CONTACT_KEY else "Write"} to us by email: {email_link(CONTACT_EMAIL)}.</p>')
         add("/contact/", layout("/contact/", f"Contact {SITE_NAME}", f"Report a wrong date or send a question or suggestion to {SITE_NAME}.",
                                 "".join(parts), None, [("Home", "/")]))
     add("/404.html", layout("/404.html", "Page not found", "Page not found.",

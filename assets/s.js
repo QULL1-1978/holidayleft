@@ -100,13 +100,15 @@ if(cf){cf.oninput=function(){
 }}
 
 /* contact form */
-var cform=$('cform');
+var cform=$('cform'),formT=Date.now();
 if(cform&&window.fetch){
   cform.addEventListener('submit',function(e){
     e.preventDefault();
     var st=$('cstatus'),btn=cform.querySelector('button');
-    st.className='';st.textContent='Sending…';btn.disabled=true;
     var data={};new FormData(cform).forEach(function(v,k){data[k]=v});
+    if(data.website||data.botcheck||(Date.now()-formT)<3000){st.className='ok';st.textContent='Thank you. Your message was sent.';return}
+    if(!data['h-captcha-response']){st.className='err';st.textContent='Please tick the box to show you are not a robot.';return}
+    st.className='';st.textContent='Sending…';btn.disabled=true;
     fetch(cform.action,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)})
       .then(function(r){return r.json()})
       .then(function(j){
@@ -116,5 +118,12 @@ if(cform&&window.fetch){
       .catch(function(){st.className='err';st.textContent='Sorry, the message could not be sent. Please check your connection and try again.'})
       .then(function(){btn.disabled=false});
   });
+}
+
+/* e-mail link */
+var em=document.querySelectorAll('.eml');
+for(var q=0;q<em.length;q++){
+  var a=document.createElement('a'),addr=em[q].getAttribute('data-u')+'@'+em[q].getAttribute('data-d');
+  a.href='mailto:'+addr;a.textContent=addr;em[q].parentNode.replaceChild(a,em[q]);
 }
 })();
