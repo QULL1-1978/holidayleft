@@ -34,6 +34,7 @@ REFRESH = "--refresh" in sys.argv
 CONTACT_KEY = os.environ.get("CONTACT_KEY") or "f2e221ad-2414-4d34-b5ba-c0ae5ff9285b"  # Web3Forms public access key
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or "hello@holidayleft.com"
 OWNER = os.environ.get("OWNER") or "3Sped OÜ"
+GA_ID = os.environ.get("GA_ID") or "G-638VP6DVLH"   # Google Analytics 4 measurement ID (loaded only after consent)
 CONTACT_ON = bool(CONTACT_KEY or CONTACT_EMAIL)
 
 NOW_UTC = dt.datetime.now(dt.timezone.utc)
@@ -237,7 +238,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <script>try{{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script>
 <link rel="stylesheet" href="/s.css">
 </head>
-<body>
+<body data-ga="{esc(GA_ID)}">
 <header class="site"><div class="hd">
 <a class="logo" href="/">{LOGO}{esc(SITE_NAME)}</a>
 <nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/days-until/">Days until</a>
@@ -249,9 +250,13 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 </main>
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
-<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a></p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
 <p>© {YEAR} {esc(SITE_NAME)} · operated by {esc(OWNER)}</p>
 </footer>
+<div id="cc" class="cc" role="dialog" aria-live="polite" aria-label="Cookie choices" hidden>
+<p><strong>Cookies?</strong> With your OK we use Google Analytics cookies to see which pages are used. No ads and no profiles. You can change your mind at any time under <em>Cookie settings</em> in the footer. <a href="/privacy/">Privacy policy</a></p>
+<div class="cc-b"><button type="button" id="cc-no">Decline</button><button type="button" id="cc-yes">Accept</button></div>
+</div>
 {data_html}
 <script src="/s.js" defer></script>
 </body>
@@ -1027,15 +1032,17 @@ def build_static():
     add("/privacy/", layout("/privacy/", "Privacy Policy",
                             f"Privacy policy of {SITE_NAME}.",
                             f"""<h1>Privacy policy</h1>
-<p>{n} is operated by {esc(OWNER)}, a company registered in Estonia, which is the controller of any personal data described on this page. {n} does not ask you to create an account and does not use advertising or analytics cookies at the moment.</p>
+<p>{n} is operated by {esc(OWNER)}, a company registered in Estonia, which is the controller of any personal data described on this page. {n} does not ask you to create an account and does not use advertising cookies.</p>
 <h2>What stays on your device</h2>
 <p>If you switch between light and dark mode, the site stores your choice in your browser's local storage on your own device. The site also reads your browser's language and time zone setting to preselect your country. Neither is sent to us.</p>
 <h2>Hosting</h2>
 <p>The site is hosted on GitHub Pages and its domain is managed through Cloudflare's DNS service. Like any web host, they may record technical data such as your IP address and the pages you request in their server logs.</p>
 <h2>Contact{" form" if CONTACT_KEY else ""}</h2>
 <p>If you write to us, we use your message and email address only to answer you.{form_note}</p>{captcha_note}
-<h2>Advertising and analytics</h2>
-<p>If advertising or analytics are added later, they may use cookies provided by third parties, and this page will name them and explain how to opt out before they are switched on.</p>
+<h2>Analytics and cookies</h2>
+<p>With your consent, we use Google Analytics 4, a service of Google, to learn which pages are visited and how people find the site. Google Analytics sets the cookies <code>_ga</code> and <code>_ga_*</code> and collects data such as the pages you view, your approximate location, your device and browser type, and the page you came from. We do not use it to identify you personally.</p>
+<p>Analytics is switched off until you press <em>Accept</em> in the cookie notice. If you press <em>Decline</em>, nothing is loaded from Google. You can change your choice at any time with <em>Cookie settings</em> in the footer of every page, which also deletes the Analytics cookies when you decline. Google may process the data outside the European Economic Area under its own terms. See <a href="https://policies.google.com/technologies/partner-sites" rel="noopener">how Google uses data</a> for details.</p>
+<p>Your choice is stored in your browser's local storage on your own device. If advertising is added in the future, this page will name the partners and ask for consent before any advertising cookie is used.</p>
 <h2>Your rights</h2>
 <p>You can ask us to see, correct or delete any message you sent us.{contact_p}</p>""",
                             None, [("Home", "/")]))
