@@ -19,6 +19,8 @@ import urllib.request
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import content as TXT
+
 ROOT = Path(__file__).parent
 DATA = ROOT / "data"
 DIST = ROOT / "dist"
@@ -28,6 +30,10 @@ SITE_NAME = (os.environ.get("SITE_NAME") or "HolidayLeft")
 SITE_URL = (os.environ.get("SITE_URL") or "https://holidayleft.com").rstrip("/")
 API = "https://date.nager.at/api/v3"
 REFRESH = "--refresh" in sys.argv
+# Contact form: Web3Forms public access key (safe to keep in the repo) and/or a visible contact address.
+CONTACT_KEY = os.environ.get("CONTACT_KEY") or ""
+CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or ""
+CONTACT_ON = bool(CONTACT_KEY or CONTACT_EMAIL)
 
 NOW_UTC = dt.datetime.now(dt.timezone.utc)
 YEAR = NOW_UTC.year
@@ -65,6 +71,35 @@ EMOJI = {
     "summer-solstice": "☀️", "winter-solstice": "❄️",
 }
 NAMED_DATES = {}
+COUNTRIES = []
+HOLIDAY_INDEX = {}   # holiday-name slug -> [(country, record), ...] (nationwide public holidays only)
+REGION_OF = {}       # cc -> region name
+REGION_SLUG = {"Europe": "europe", "Americas": "americas", "Asia": "asia", "Africa": "africa", "Oceania": "oceania"}
+_REGION_OVERRIDE = {"BM": "Americas", "CV": "Africa", "FK": "Americas", "FO": "Europe", "IS": "Europe", "SH": "Africa",
+                    "CC": "Asia", "CX": "Asia", "KM": "Africa", "MG": "Africa", "SC": "Africa", "SJ": "Europe",
+                    "CY": "Europe", "MU": "Africa", "MV": "Asia", "YT": "Africa", "RE": "Africa"}
+
+
+def region_for(c):
+    if c["cc"] in _REGION_OVERRIDE:
+        return _REGION_OVERRIDE[c["cc"]]
+    pre = c["tz"].split("/")[0]
+    return {"Europe": "Europe", "America": "Americas", "Asia": "Asia", "Africa": "Africa",
+            "Australia": "Oceania", "Pacific": "Oceania"}.get(pre, "Asia")
+
+
+def faq_html(items, heading="Frequently asked questions"):
+    out = "".join(f"<h3>{esc(q)}</h3><p>{a}</p>" for q, a in items)
+    return f'<section class="faq"><h2>{esc(heading)}</h2>{out}</section>'
+
+
+def cname_links(pairs, limit=40):
+    """pairs: [(country, record)] -> comma separated links (names) with a '+N more' tail."""
+    shown = pairs[:limit]
+    txt = ", ".join(f'<a href="/holidays/{c["slug"]}/">{esc(c["name"])}</a>' for c, _ in shown)
+    if len(pairs) > limit:
+        txt += f" and {len(pairs) - limit} more"
+    return txt
 
 
 def fmt_date(d, weekday=True):
@@ -73,7 +108,11 @@ def fmt_date(d, weekday=True):
 
 
 def plural(n, w):
-    return f"{n} {w}{'' if n == 1 else 's'}"
+    if n == 1:
+        return f"{n} {w}"
+    if w.endswith("y") and w[-2:-1] not in "aeiou":
+        return f"{n} {w[:-1]}ies"
+    return f"{n} {w}s"
 
 
 def get_json(url):
@@ -127,6 +166,7 @@ LOGO = ('<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32
 
 
 def layout(path, title, desc, body, data=None, crumbs=None):
+    CONTACT_LINK = '<br><a href="/contact/">Contact</a>' if CONTACT_ON else ""
     canon = f"{SITE_URL}{path}"
     crumb_html = ""
     if crumbs:
@@ -157,7 +197,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <body>
 <header class="site"><div class="hd">
 <a class="logo" href="/">{LOGO}{esc(SITE_NAME)}</a>
-<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/days-until/">Days until</a>
+<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/days-until/">Days until</a>
 <button id="theme" type="button" aria-label="Switch between light and dark mode" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button></nav>
 </div></header>
 <main>
@@ -166,7 +206,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 </main>
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
-<p><a href="/holidays/">Countries</a><br><a href="/days-until/">Days until</a><br><a href="/about/">About</a><br><a href="/privacy/">Privacy</a></p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a></p></div>
 <p>© {YEAR} {esc(SITE_NAME)}</p>
 </footer>
 {data_html}
@@ -380,11 +420,63 @@ def build_country(c, all_countries):
             items = "".join(f'<li>{r["date"].day} {MONTHS[r["date"].month - 1]}: {esc(r["name"])}</li>' for r in oth)
             parts.append(f'<details><summary>Other observances and bank holidays in {YEAR}</summary><ul>{items}</ul></details>')
 
-    parts.append(f"""<h2>Frequently asked questions</h2>
-<p><strong>How many public holidays does {esc(name)} have?</strong><br>
-In {YEAR}, {sum(1 for r in c["pub"] if r["date"].year == YEAR and r["global"])} nationwide public holidays are listed above, plus any that apply to single regions.</p>
-<p><strong>What is the next public holiday in {esc(name)}?</strong><br>
-{esc(nxt["name"]) + " on " + esc(fmt_date(nxt["date"])) if nxt else "See the list above."}</p>""")
+    yr = [r for r in c["pub"] if r["date"].year == YEAR]
+    nat = [r for r in yr if r["global"]]
+    reg = [r for r in yr if not r["global"]]
+    wk_end = [r for r in nat if r["date"].weekday() >= 5]
+    wk_day = [r for r in nat if r["date"].weekday() < 5]
+    by_m = {}
+    for r in nat:
+        by_m.setdefault(r["date"].month, []).append(r)
+    busiest = max(by_m.items(), key=lambda kv: (len(kv[1]), -kv[0])) if by_m else None
+    lw_all = [r for r in nat if r["date"].weekday() in (0, 4)]
+    if by_m:
+        li = "".join(
+            f'<li><strong>{MONTHS[m - 1]}</strong>: ' + "; ".join(f'{esc(r["name"])} ({r["date"].day})' for r in rs) + "</li>"
+            for m, rs in sorted(by_m.items()))
+        empty = [MONTHS[m - 1] for m in range(1, 13) if m not in by_m]
+        tail = (f"<p class=\"mut\">No nationwide public holidays in {', '.join(empty)}.</p>" if empty else "")
+        parts.append(f"<h2>{esc(name)} public holidays by month in {YEAR}</h2><ul>{li}</ul>{tail}")
+        parts.append(f"""<h2>How the holidays fall in {YEAR}</h2>
+<div class="stats">
+<div><b>{len(nat)}</b><span>nationwide public holidays</span></div>
+<div><b>{len(wk_day)}</b><span>fall on Monday to Friday</span></div>
+<div><b>{len(wk_end)}</b><span>fall on a weekend</span></div>
+<div><b>{len(lw_all)}</b><span>give a long weekend</span></div>
+</div>
+<p>The first nationwide public holiday of {YEAR} is {esc(nat[0]["name"])} on {esc(fmt_date(nat[0]["date"]))}, and the last is {esc(nat[-1]["name"])} on {esc(fmt_date(nat[-1]["date"]))}. {MONTHS[busiest[0] - 1]} is the busiest month, with {plural(len(busiest[1]), "holiday")}. For people who work a standard Monday to Friday week, the {len(wk_day)} holidays on weekdays are the ones that usually mean a day away from work or school.</p>""")
+
+    parts.append(f"""<h2>About public holidays in {esc(name)}</h2>
+<p>This page lists the public holidays of {esc(name)} for {YEAR} and {YEAR + 1}, with the date and weekday of each one. A holiday marked <em>Nationwide</em> applies everywhere in the country. One marked <em>Some regions</em> applies only to part of it, for example a state or province. Where the official name is different from the English one, the local name appears under it.</p>
+<p>Moveable holidays, such as the ones counted from Easter, change their date from year to year, so it is worth checking the table each year before you plan. Our main time zone for {esc(name)} is {esc(c["tz"])}, which is what the live countdown and the "is today a holiday" pages use.</p>""")
+
+    faq_items = []
+    faq_items.append((f"How many public holidays does {name} have in {YEAR}?",
+                      f"{esc(name)} has {len(nat)} nationwide public holidays in {YEAR}"
+                      + (f" and {len(reg)} more that apply in some regions only" if reg else "")
+                      + ". The full list with dates and weekdays is in the table above."))
+    if nxt:
+        faq_items.append((f"What is the next public holiday in {name}?",
+                          f"The next nationwide public holiday is {esc(nxt['name'])} on {esc(fmt_date(nxt['date']))}. The countdown at the top of this page shows the days left."))
+    faq_items.append((f"Is today a public holiday in {name}?",
+                      f'Use the live checker: <a href="/is-today-a-holiday-in-{s}/">is today a public holiday in {esc(name)}</a>. It works out the date in {esc(name)}\'s own time zone. You can also check <a href="/is-tomorrow-a-holiday-in-{s}/">tomorrow</a>.'))
+    faq_items.append((f"Which public holidays in {name} fall on a weekend in {YEAR}?",
+                      ("; ".join(f'{esc(r["name"])} ({esc(fmt_date(r["date"]))})' for r in wk_end) + ". Whether a day in lieu is given depends on local rules."
+                       if wk_end else f"None of the nationwide public holidays in {YEAR} fall on a weekend.")))
+    faq_items.append((f"Are there long weekends in {name} in {YEAR}?",
+                      (f"Yes. {len(lw_all)} nationwide holidays fall on a Friday or a Monday: "
+                       + "; ".join(f'{esc(r["name"])} ({esc(fmt_date(r["date"]))})' for r in lw_all)
+                       + ". Taking a bridge day next to a holiday on a Tuesday or Thursday can also give a longer break.")
+                      if lw_all else f"No nationwide holiday falls on a Friday or a Monday in {YEAR}, so there is no automatic three-day weekend. A holiday on a Tuesday or Thursday can still be turned into a longer break with a bridge day."))
+    if busiest:
+        faq_items.append((f"Which month has the most public holidays in {name}?",
+                          f"{MONTHS[busiest[0] - 1]} has the most nationwide public holidays in {YEAR}: {plural(len(busiest[1]), 'holiday')}."))
+    faq_items.append((f"Are the public holidays the same in all regions of {name}?",
+                      (f"Not entirely. {len(reg)} holidays in the list apply only in some regions and are marked that way in the table. The rest apply nationwide."
+                       if reg else f"The holidays listed here apply nationwide. If {esc(name)} has local or regional days off, they are not part of this list.")))
+    faq_items.append(("How often is this page updated?",
+                      "The whole site is rebuilt every day from the latest data, and the countdown on the page is calculated in your browser, so it stays correct without a reload."))
+    parts.append(faq_html(faq_items))
 
     dates = [[r["date"].isoformat(), r["name"]] for r in headline(c)]
     title = f"Public Holidays in {name} {YEAR} and {YEAR + 1} – Dates and Countdown"
@@ -392,6 +484,38 @@ In {YEAR}, {sum(1 for r in c["pub"] if r["date"].year == YEAR and r["global"])} 
     add(f"/holidays/{s}/", layout(f"/holidays/{s}/", title, desc, "\n".join(parts),
                                   {"type": "country", "tz": c["tz"], "dates": dates},
                                   [("Home", "/"), ("Countries", "/holidays/"), (name, f"/holidays/{s}/")]))
+
+
+def upcoming_table(c, after):
+    if not after:
+        return ""
+    rows = "".join(f'<tr><td>{esc(fmt_date(r["date"]))}</td><td>{esc(r["name"])}</td></tr>' for r in after[:6])
+    return (f'<h2>Upcoming public holidays in {esc(c["name"])}</h2>'
+            f'<div class="tw"><table><tr><th>Date</th><th>Holiday</th></tr>{rows}</table></div>'
+            f'<p><a href="/holidays/{c["slug"]}/">See the full {esc(c["name"])} holiday calendar</a></p>')
+
+
+def isday_faq(c, word, nxt):
+    name, s = c["name"], c["slug"]
+    n_nat = sum(1 for r in c["pub"] if r["global"] and r["date"].year == YEAR)
+    other = "tomorrow" if word == "today" else "today"
+    items = [
+        (f"Is {word} a public holiday in {name}?",
+         "The answer is at the top of this page. It is calculated from the official holiday list for the country and "
+         f"the current date in {esc(c['tz'])}, so it stays correct even if you leave the page open."),
+        (f"What does \"Partly\" mean?",
+         "Some public holidays apply only in certain regions, states or provinces. When the date is a holiday in some regions but not in the whole country, the page shows Partly and names the holiday."),
+        (f"How many public holidays does {name} have in {YEAR}?",
+         f"{esc(name)} has {n_nat} nationwide public holidays in {YEAR}. See the <a href=\"/holidays/{s}/\">full list for {esc(name)}</a>."),
+        (f"Are shops, banks and schools closed on public holidays in {name}?",
+         "Opening rules differ by country, by type of business and sometimes by holiday. Many offices, schools and banks close on public holidays, while shops, restaurants and transport may stay open or run reduced hours. For a specific business, check its own opening hours."),
+        (f"Is {other} a public holiday in {name}?",
+         f'See <a href="/is-{other}-a-holiday-in-{s}/">is {other} a public holiday in {esc(name)}</a>.'),
+    ]
+    if nxt:
+        items.append((f"When is the next public holiday in {name}?",
+                      f"{esc(nxt['name'])} on {esc(fmt_date(nxt['date']))}."))
+    return faq_html(items)
 
 
 def build_isday(c, offset):
@@ -428,7 +552,9 @@ def build_isday(c, offset):
 </div>
 {nxt_html}
 <p><a href="{other_path}">Is {other} a holiday in {esc(name)}?</a> · <a href="/holidays/{s}/">All {esc(name)} public holidays {YEAR}</a></p>
-<p class="mut">The answer is worked out for the date in {esc(name)}'s main time zone ({esc(c["tz"])}). "Partly" means the day is a holiday only in some regions.</p>"""
+<p class="mut">The answer is worked out for the date in {esc(name)}'s main time zone ({esc(c["tz"])}). "Partly" means the day is a holiday only in some regions.</p>
+{upcoming_table(c, after)}
+{isday_faq(c, word, nxt)}"""
     title = f"Is {word.capitalize()} a Public Holiday in {name}? ({fmt_date(target, False)})"
     desc = f"Find out right now whether {word} is a public holiday in {name}, with the next holiday and a countdown."
     path = f"/is-{word}-a-holiday-in-{s}/"
@@ -436,6 +562,36 @@ def build_isday(c, offset):
                      {"type": "isday", "offset": offset, "tz": c["tz"], "h": hmap,
                       "dates": [[r["date"].isoformat(), r["name"]] for r in headline(c)]},
                      [("Home", "/"), (name, f"/holidays/{s}/")]))
+
+
+def holiday_extra(c, sl, recs, nxt):
+    name, s = c["name"], c["slug"]
+    r0 = recs[0]
+    hn = r0["name"]
+    items = []
+    by_year = "; ".join(f'{r["date"].year}: {esc(fmt_date(r["date"]))}' for r in recs)
+    items.append((f"When is {hn} in {name}?", f"{esc(hn)} falls on " + " and ".join(esc(fmt_date(r["date"])) for r in recs) + "."))
+    nxt_rec = next(r for r in recs if r["date"] == nxt)
+    items.append((f"Is {hn} a nationwide public holiday in {name}?",
+                  f"Yes, {esc(hn)} is a public holiday across the whole country." if nxt_rec["global"]
+                  else f"{esc(hn)} is a public holiday only in some regions of {esc(name)}, not in the whole country."))
+    wkend = [r for r in recs if r["date"].weekday() >= 5]
+    items.append((f"Does {hn} fall on a weekend?",
+                  ("In " + " and ".join(f'{r["date"].year} it falls on a {WD[r["date"].weekday()]}' for r in wkend)
+                   + ". Whether a day in lieu is given depends on local rules.") if wkend
+                  else f"Not in the years listed: {esc(hn)} falls on a weekday in {', '.join(str(r['date'].year) for r in recs)}."))
+    after = [r for r in headline(c) if r["date"] > nxt]
+    if after:
+        items.append((f"Which public holiday in {name} comes after {hn}?",
+                      f"The next one is {esc(after[0]['name'])} on {esc(fmt_date(after[0]['date']))}."))
+    items.append((f"How many days until {hn}?",
+                  "The live countdown at the top of this page shows the days and weeks left. It is calculated from your device's date."))
+    others = [(oc, orr) for oc, orr in HOLIDAY_INDEX.get(sl, []) if oc["cc"] != c["cc"]]
+    out = ""
+    if others:
+        out += (f'<h2>Other countries with {esc(hn)}</h2><p>A nationwide public holiday with this name also appears in the '
+                f'calendars of: {cname_links(others, 40)}.</p>')
+    return out + faq_html(items)
 
 
 def build_country_holiday(c):
@@ -462,6 +618,7 @@ def build_country_holiday(c):
 <p>{esc(r0["name"])}{local} is {scope} in {esc(name)}. In {nxt.year} it falls on a {WD[nxt.weekday()]}.</p>
 <h2>{esc(r0["name"])} dates in {esc(name)}</h2>
 <div class="tw"><table><tr><th>Date</th><th>Applies</th></tr>{rows}</table></div>
+{holiday_extra(c, sl, recs, nxt)}
 <h2>More {esc(name)} holidays</h2>
 <ul class="tiles">{sib_html}</ul>
 {country_nav(c)}"""
@@ -473,6 +630,35 @@ def build_country_holiday(c):
                          [("Home", "/"), (name, f"/holidays/{s}/"), (r0["name"], path)]))
         made.append(sl)
     return made
+
+
+def named_extra(sl, title, dates):
+    out = f"<h2>About {esc(title)}</h2><p>{esc(TXT.BACKGROUND.get(sl, ''))}</p>"
+    obs = HOLIDAY_INDEX.get(TXT.NAMED_TO_HOLIDAY.get(sl, ""), [])
+    us_map = {"memorial-day": "memorial-day", "independence-day-us": "independence-day",
+              "labor-day-us": "labour-day", "thanksgiving-us": "thanksgiving-day"}
+    us_path = f"/days-until/united-states/{us_map[sl]}/" if sl in us_map else ""
+    items = []
+    nxt = dates[0]
+    items.append((f"When is {title} in {nxt.year}?", f"{esc(title)} falls on {esc(fmt_date(nxt))}."))
+    items.append((f"What day of the week is {title} in the coming years?",
+                  "; ".join(f"{d.year}: {WD[d.weekday()]}" for d in dates) + "."))
+    items.append((f"How many days until {title}?",
+                  "The live countdown at the top of this page shows the days and weeks left. It is calculated from your device's date, so it is always current."))
+    if obs:
+        items.append((f"Is {title} a public holiday?",
+                      f"It is a nationwide public holiday in {len(obs)} of the countries and territories in our data, "
+                      f"including {cname_links(obs, 12)}. See each country's page for official dates."))
+        out += f'<h2>Countries where {esc(title)} is a public holiday</h2><p>{cname_links(obs, 60)}.</p>'
+    elif us_path and us_path in pages:
+        items.append((f"Is {title} a public holiday?",
+                      f'In the United States it is a public holiday; see <a href="{us_path}">the United States page</a>. In most other countries it is not.'))
+    else:
+        items.append((f"Is {title} a public holiday?",
+                      "In most countries it is not a public holiday but a day that people mark with traditions, events or shopping. Official days off are listed on each country's page."))
+    items.append(("Does the date change every year?",
+                  "Fixed-date events such as 25 December stay on the same calendar date and only the weekday changes. Events defined by a weekday rule or by Easter move around, as the table above shows."))
+    return out + faq_html(items)
 
 
 def build_named():
@@ -488,6 +674,7 @@ def build_named():
 <p>{esc(blurb)}</p>
 <h2>{esc(title)} dates</h2>
 <div class="tw"><table><tr><th>Year</th><th>Date</th></tr>{rows}</table></div>
+{named_extra(sl, title, dates)}
 <p><a href="/days-until/">More countdowns</a> · <a href="/holidays/">Public holidays by country</a></p>"""
         path = f"/days-until/{sl}/"
         add(path, layout(path, f"How Many Days Until {title}? Countdown {nxt.year}",
@@ -517,11 +704,41 @@ def build_monthday():
         days = (nxt - today).days
         rows = "".join(f"<tr><td>{x.year}</td><td>{WD[x.weekday()]}</td></tr>" for x in dates[:6])
         leap = ' Because it exists only in leap years, the countdown skips to the next leap year.' if (m, dd) == (2, 29) else ""
+        doy = nxt.timetuple().tm_yday
+        left = (dt.date(nxt.year, 12, 31) - nxt).days
+        iso_wk = nxt.isocalendar()[1]
+        world = [(oc, orr) for oc in COUNTRIES for orr in oc["pub"]
+                 if orr["global"] and orr["date"] == nxt]
+        world_html = ""
+        if world:
+            lines = "".join(f'<li>{flag(oc["cc"])} <a href="/holidays/{oc["slug"]}/">{esc(oc["name"])}</a>: {esc(orr["name"])}</li>'
+                            for oc, orr in world[:60])
+            more = f"<p class=\"mut\">and {len(world) - 60} more.</p>" if len(world) > 60 else ""
+            world_html = (f"<h2>Public holidays on {label} {nxt.year} around the world</h2>"
+                          f"<p>In {nxt.year}, {label} is a nationwide public holiday in {len(world)} of the countries in our data.</p>"
+                          f'<ul class="plain">{lines}</ul>{more}')
+        else:
+            world_html = (f"<h2>Public holidays on {label} {nxt.year}</h2>"
+                          f"<p>None of the countries in our data has a nationwide public holiday on {label} in {nxt.year}.</p>")
+        leap_note = "a leap year" if (nxt.year % 4 == 0 and (nxt.year % 100 != 0 or nxt.year % 400 == 0)) else "not a leap year"
+        faq = faq_html([
+            (f"How many days until {label}?", "The live countdown at the top of this page shows the exact number of days and weeks. It is calculated from your device's date."),
+            (f"What day of the week is {label} in {nxt.year}?", f"{label} {nxt.year} is a {WD[nxt.weekday()]}."),
+            (f"Which day of the year is {label}?", f"In {nxt.year}, {label} is day {doy} of the year, in ISO week {iso_wk}, with {left} days left in the year. {nxt.year} is {leap_note}."),
+            (f"Is {label} a public holiday?", (f"In {nxt.year} it is a nationwide public holiday in {len(world)} countries in our data; see the list above." if world else f"Not in any of the countries in our data in {nxt.year}.")),
+        ])
         body = f"""<h1>How many days until {label}?</h1>
 {until_block(days, fmt_date(nxt), wk_text(days))}
 <p>The next {label} is on a {WD[nxt.weekday()]}, {days} days from now.{leap}</p>
+<div class="stats">
+<div><b>{doy}</b><span>day of the year</span></div>
+<div><b>{left}</b><span>days left that year</span></div>
+<div><b>{iso_wk}</b><span>ISO week number</span></div>
+</div>
 <h2>What day of the week is {label}?</h2>
 <div class="tw"><table><tr><th>Year</th><th>Weekday</th></tr>{rows}</table></div>
+{world_html}
+{faq}
 <p><a href="/days-until/">More countdowns</a> · <a href="/holidays/">Public holidays by country</a></p>"""
         path = f"/days-until/{sl}/"
         add(path, layout(path, f"How Many Days Until {label}? Countdown {nxt.year}",
@@ -531,6 +748,14 @@ def build_monthday():
         links.append((sl, label))
         d += dt.timedelta(days=1)
     return links
+
+
+def region_tiles():
+    out = ""
+    for reg, sl in REGION_SLUG.items():
+        n = sum(1 for c in COUNTRIES if REGION_OF[c["cc"]] == reg)
+        out += f'<li><a href="/regions/{sl}/"><span class="t">{reg}</span><span class="dl">{n} countries</span></a></li>'
+    return out
 
 
 def build_indexes(countries, named, monthday, holiday_counts):
@@ -566,9 +791,20 @@ def build_indexes(countries, named, monthday, holiday_counts):
 <h2>Count down to…</h2>
 <ul class="tiles ev">{pop}</ul>
 <p><a href="/days-until/">See all countdowns, including any date of the year →</a></p>
+<h2>How {esc(SITE_NAME)} works</h2>
+<div class="steps">
+<div><b>1</b><h3>Pick a country</h3><p>Choose from {len(countries)} countries and territories, or let the page detect yours.</p></div>
+<div><b>2</b><h3>See today's status</h3><p>We check the date in the country's own time zone and tell you whether it is a public holiday.</p></div>
+<div><b>3</b><h3>Plan ahead</h3><p>Browse the next holidays, long weekends and a live countdown for every date.</p></div>
+</div>
+<h2>Browse by region</h2>
+<ul class="tiles">{region_tiles()}</ul>
+<p><a href="/holidays/world/">See public holidays worldwide by month →</a></p>
 <h2>Browse by country</h2>
 {flt}
-<ul class="tiles" id="clist">{clist}</ul>"""
+<ul class="tiles" id="clist">{clist}</ul>
+{faq_html(TXT.GENERAL_FAQ[:6])}
+<p><a href="/faq/">More questions and a glossary →</a></p>"""
     add("/", layout("/", f"{SITE_NAME}: Public Holidays and Days Until Countdowns",
                     f"Is today a public holiday? Check {len(countries)} countries, see the next holiday and count the days until Christmas, Easter or any date.",
                     body))
@@ -584,20 +820,191 @@ def build_indexes(countries, named, monthday, holiday_counts):
                                None, [("Home", "/")]))
 
 
+def build_faq():
+    gl = "".join(f"<dt>{esc(t)}</dt><dd>{esc(d)}</dd>" for t, d in TXT.GLOSSARY)
+    body = (f"<h1>Questions and answers</h1><p>Short answers about public holidays and how this site works.</p>"
+            + faq_html(TXT.GENERAL_FAQ, "Frequently asked questions")
+            + f'<section class="faq"><h2>Glossary</h2><dl>{gl}</dl></section>'
+            + '<p><a href="/holidays/">Browse public holidays by country</a></p>')
+    add("/faq/", layout("/faq/", f"Public Holiday FAQ and Glossary | {SITE_NAME}",
+                        "Answers to common questions about public holidays, bank holidays, regional holidays, days in lieu and how the dates are calculated.",
+                        body, None, [("Home", "/")]))
+
+
+def build_regions():
+    today = NOW_UTC.date()
+    idx = ""
+    for reg, sl in REGION_SLUG.items():
+        cs = [c for c in COUNTRIES if REGION_OF[c["cc"]] == reg]
+        if not cs:
+            continue
+        counts = []
+        rows = ""
+        for c in cs:
+            nat = [r for r in c["pub"] if r["global"] and r["date"].year == YEAR]
+            counts.append((len(nat), c))
+            up = next((r for r in headline(c) if r["date"] >= country_today(c)), None)
+            nxt = f'{esc(up["name"])}<div class="mut">{esc(fmt_date(up["date"]))}</div>' if up else "-"
+            rows += (f'<tr><td>{flag(c["cc"])} <a href="/holidays/{c["slug"]}/">{esc(c["name"])}</a></td>'
+                     f'<td>{len(nat)}</td><td>{nxt}</td></tr>')
+        counts.sort(key=lambda x: (-x[0], x[1]["name"]))
+        top, low = counts[0], counts[-1]
+        avg = sum(n for n, _ in counts) / len(counts)
+        body = f"""<h1>Public holidays in {reg} {YEAR}</h1>
+<p>{esc(TXT.REGION_TEXT[reg])}</p>
+<div class="stats">
+<div><b>{len(cs)}</b><span>countries and territories</span></div>
+<div><b>{avg:.0f}</b><span>nationwide holidays on average in {YEAR}</span></div>
+<div><b>{top[0]}</b><span>most: {esc(top[1]["name"])}</span></div>
+<div><b>{low[0]}</b><span>fewest: {esc(low[1]["name"])}</span></div>
+</div>
+<h2>Countries in {reg}</h2>
+<div class="tw"><table><tr><th>Country</th><th>Nationwide holidays {YEAR}</th><th>Next public holiday</th></tr>{rows}</table></div>
+{faq_html([
+    (f"Which {reg} country has the most public holidays in {YEAR}?", f"Among the countries in our data, {esc(top[1]['name'])} has the most nationwide public holidays in {reg} in {YEAR}: {top[0]}."),
+    (f"How many public holidays does a typical {reg} country have?", f"The average across the {len(cs)} countries in our data is about {avg:.0f} nationwide public holidays in {YEAR}, but the range is wide."),
+    ("Where can I see holidays for a single country?", 'Open any country in the table for its full calendar, long weekends and a live countdown.'),
+])}
+<p><a href="/regions/">All regions</a> · <a href="/holidays/world/">Holidays worldwide by month</a></p>"""
+        add(f"/regions/{sl}/", layout(f"/regions/{sl}/", f"Public Holidays in {reg} {YEAR} – Countries and Next Holiday",
+                                      f"Public holidays in {len(cs)} countries and territories in {reg} for {YEAR}: how many each has and the next holiday.",
+                                      body, None, [("Home", "/"), ("Regions", "/regions/"), (reg, f"/regions/{sl}/")]))
+        idx += f'<li><a href="/regions/{sl}/"><span class="t">{reg}</span><span class="dl">{len(cs)} countries</span></a></li>'
+    add("/regions/", layout("/regions/", f"Public Holidays by Region {YEAR}",
+                            "Public holidays in Europe, the Americas, Asia, Africa and Oceania.",
+                            f"<h1>Public holidays by region</h1><ul class=\"tiles ev\">{idx}</ul>", None, [("Home", "/")]))
+
+
+def build_world_months():
+    links = ""
+    for y in YEARS:
+        for m in range(1, 13):
+            groups = {}
+            for c in COUNTRIES:
+                for r in c["pub"]:
+                    if r["global"] and r["date"].year == y and r["date"].month == m:
+                        groups.setdefault((r["date"], r["name"]), []).append(c)
+            if not groups:
+                continue
+            days = {}
+            for (d, _), cs in groups.items():
+                days[d] = days.get(d, 0) + len(cs)
+            busiest = max(days.items(), key=lambda kv: (kv[1], -kv[0].toordinal()))
+            rows = ""
+            for (d, nm), cs in sorted(groups.items(), key=lambda kv: (kv[0][0], -len(kv[1]), kv[0][1])):
+                shown = cs[:30]
+                names = ", ".join(f'<a href="/holidays/{c["slug"]}/">{esc(c["name"])}</a>' for c in shown)
+                if len(cs) > 30:
+                    names += f" and {len(cs) - 30} more"
+                rows += (f'<tr><td>{d.day} {MONTHS[m - 1][:3]}<div class="mut">{WD[d.weekday()][:3]}</div></td>'
+                         f'<td>{esc(nm)}<div class="mut">{plural(len(cs), "country")}</div></td><td>{names}</td></tr>')
+            sl = f"{MONTHS[m - 1].lower()}-{y}"
+            path = f"/holidays/world/{sl}/"
+            nav = ""
+            body = f"""<h1>Public holidays worldwide in {MONTHS[m - 1]} {y}</h1>
+<p>{len(groups)} different nationwide public holidays (counted by date and name) fall in {MONTHS[m - 1]} {y} across the countries in our data. The busiest date is {esc(fmt_date(busiest[0]))}, when {plural(busiest[1], "country")} have a public holiday. Holidays that apply only in some regions are not included here; open a country page for those.</p>
+<div class="tw"><table><tr><th>Date</th><th>Holiday</th><th>Countries</th></tr>{rows}</table></div>
+{faq_html([
+    (f"Which date has the most public holidays in {MONTHS[m - 1]} {y}?", f"{esc(fmt_date(busiest[0]))}, when {plural(busiest[1], 'country')} have a public holiday."),
+    (f"How many different public holidays are there in {MONTHS[m - 1]} {y}?", f"{len(groups)} distinct date and holiday combinations across all countries in our data."),
+    ("Are regional holidays included?", "No. This page lists only holidays that apply in the whole country. Regional holidays are shown on each country's page."),
+])}
+<p><a href="/holidays/world/">All months</a> · <a href="/holidays/">Countries</a></p>"""
+            add(path, layout(path, f"Public Holidays Worldwide in {MONTHS[m - 1]} {y} – By Country",
+                             f"Every nationwide public holiday in {MONTHS[m - 1]} {y}, with the date and the countries that observe it.",
+                             body, None, [("Home", "/"), ("By month", "/holidays/world/"), (f"{MONTHS[m - 1]} {y}", path)]))
+            links += f'<li><a href="{path}"><span class="t">{MONTHS[m - 1]} {y}</span><span class="dl">{len(groups)} holidays</span></a></li>'
+    add("/holidays/world/", layout("/holidays/world/", f"Public Holidays Worldwide by Month {YEAR}–{YEAR + 1}",
+                                   "Month-by-month list of nationwide public holidays around the world, with the countries that observe each one.",
+                                   f"<h1>Public holidays worldwide by month</h1><p>Pick a month to see every nationwide public holiday and the countries that observe it.</p><ul class=\"tiles ev\">{links}</ul>",
+                                   None, [("Home", "/")]))
+
+
 def build_static():
+    n = esc(SITE_NAME)
+    contact_p = ' If something looks wrong, <a href="/contact/">tell us</a> and we will check it.' if CONTACT_ON else ""
     add("/about/", layout("/about/", f"About {SITE_NAME}",
-                          f"What {SITE_NAME} is and where its data comes from.",
-                          f"""<h1>About {esc(SITE_NAME)}</h1>
-<p>{esc(SITE_NAME)} answers simple questions quickly: is today or tomorrow a public holiday in a given country, when is the next one, and how many days are left until a date.</p>
-<p>Public holiday data comes from the open <a href="https://date.nager.at">Nager.Date</a> project and the site is rebuilt every day. Holidays can be moved or added at short notice, so always confirm with an official government source before you plan around a date.</p>""",
+                          f"What {SITE_NAME} is, who it is for and where its data comes from.",
+                          f"""<h1>About {n}</h1>
+<p>{n} answers a simple question quickly: is today, or tomorrow, a public holiday in a given country? Next to that you find the date of the next holiday, long weekends, month-by-month overviews for the whole world and live countdowns to holidays and to any date of the year.</p>
+<h2>Who it is for</h2>
+<p>Travellers who want to know whether shops and offices are open, people who work with colleagues or customers in other countries, event planners, and anyone who wants to plan a long weekend.</p>
+<h2>Where the data comes from</h2>
+<p>Public holiday data comes from the open <a href="https://date.nager.at" rel="noopener">Nager.Date</a> project. The site is rebuilt every day. Read more about <a href="/methodology/">how the answers are calculated</a>.{contact_p}</p>
+<p>Holidays can be moved or added at short notice, so always confirm with an official government source before you plan around a date.</p>""",
                           None, [("Home", "/")]))
+    add("/methodology/", layout("/methodology/", f"How {SITE_NAME} Works – Data and Methodology",
+                                "Where the holiday data comes from, how we decide what counts as a public holiday and how countdowns and time zones are calculated.",
+                                f"""<h1>How {n} works</h1>
+<p>This page explains where the information comes from and how the answers on the site are produced.</p>
+<h2>Data source</h2>
+<p>The lists of public holidays come from the open <a href="https://date.nager.at" rel="noopener">Nager.Date</a> project. The site downloads the lists for the current and the next year, and the whole site is rebuilt every day, so changes in the source reach the pages within about a day.</p>
+<h2>What counts as a public holiday</h2>
+<p>Only days that the source marks as <em>public holidays</em> are used for the answers, the countdowns and the tables. Other entries, such as bank-only days, school days, optional days and observances, are not counted as public holidays. Some countries list them separately and we show them in a collapsed list on the country page.</p>
+<h2>Nationwide and regional holidays</h2>
+<p>A holiday is marked <em>Nationwide</em> when it applies everywhere in the country and <em>Some regions</em> when it applies only to a state, province or other part. The headline answers and the "next holiday" countdowns use nationwide holidays when a country has any, so a local holiday does not hide the real next day off for most people.</p>
+<h2>Time zones</h2>
+<p>"Is today a holiday" is answered for the date in the country's main time zone, using the time zone database. For countries with several time zones, such as the United States, Russia or Brazil, we use the main zone, so a holiday may start a few hours earlier or later in other parts of the country.</p>
+<h2>Countdowns</h2>
+<p>Countdowns are calculated in your browser from your device's date. We count calendar days, so a holiday tomorrow is one day away and a holiday today is zero days away. The week figure divides the number of days by seven.</p>
+<h2>Moveable and approximate dates</h2>
+<p>Western Easter and the holidays counted from it are calculated with the standard Gregorian method. The solstice pages use 21 June and 21 December as close approximations, because the exact moment varies by a day from year to year.</p>
+<h2>Accuracy and corrections</h2>
+<p>Governments can change holidays at short notice and some dates depend on religious or astronomical decisions. We cannot guarantee that every date is right.{contact_p} Please confirm important dates with an official government source before you book travel or plan business around them.</p>""",
+                                None, [("Home", "/")]))
+    add("/terms/", layout("/terms/", f"Terms of Use and Disclaimer | {SITE_NAME}",
+                          f"Terms of use and disclaimer for {SITE_NAME}.",
+                          f"""<h1>Terms of use and disclaimer</h1>
+<p>By using {n} you agree to these terms. If you do not agree, please do not use the site.</p>
+<h2>Information only</h2>
+<p>Everything on this site is general information about public holidays and dates. We try to keep it accurate, but we make no promise that it is complete, current or free of errors. Do not rely on it alone for travel bookings, legal deadlines, payroll, contracts or other decisions with financial or legal consequences. Check an official government source first.</p>
+<h2>No liability</h2>
+<p>To the extent the law allows, we are not responsible for any loss or damage that results from using the site or from a wrong or missing date.</p>
+<h2>Third-party content and links</h2>
+<p>The site links to other websites, for example the data source. We do not control them and are not responsible for their content. Advertising or affiliate links may be added in the future and will be marked as such.</p>
+<h2>Intellectual property</h2>
+<p>The design and text of {n} belong to its owner. The underlying public holiday data comes from the open Nager.Date project. Flag images come from the MIT-licensed flag-icons project. You may link to any page of the site freely.</p>
+<h2>Acceptable use</h2>
+<p>Please do not overload the site with automated requests or try to disrupt it.</p>
+<h2>Changes</h2>
+<p>We may change these terms and the site at any time. The current version is always on this page.</p>""",
+                          None, [("Home", "/")]))
+    form_note = ' Messages sent with the contact form are delivered through the Web3Forms service, which processes the name, email address and message you enter so that we can read and answer them.' if CONTACT_KEY else ""
     add("/privacy/", layout("/privacy/", "Privacy Policy",
                             f"Privacy policy of {SITE_NAME}.",
                             f"""<h1>Privacy policy</h1>
-<p>{esc(SITE_NAME)} does not ask for an account, and it does not collect personal data in any form you fill in.</p>
-<p>The site reads your browser's language setting only on your own device, to preselect a country. It is not sent anywhere.</p>
-<p>If advertising or analytics are added later, they will use cookies provided by those third parties, and this page will name them and explain how to opt out.</p>""",
+<p>{n} does not ask you to create an account and does not use advertising or analytics cookies at the moment.</p>
+<h2>What stays on your device</h2>
+<p>If you switch between light and dark mode, the site stores your choice in your browser's local storage on your own device. The site also reads your browser's language and time zone setting to preselect your country. Neither is sent to us.</p>
+<h2>Hosting</h2>
+<p>The site is hosted on GitHub Pages and its domain is managed through Cloudflare's DNS service. Like any web host, they may record technical data such as your IP address and the pages you request in their server logs.</p>
+<h2>Contact{" form" if CONTACT_KEY else ""}</h2>
+<p>If you write to us, we use your message and email address only to answer you.{form_note}</p>
+<h2>Advertising and analytics</h2>
+<p>If advertising or analytics are added later, they may use cookies provided by third parties, and this page will name them and explain how to opt out before they are switched on.</p>
+<h2>Your rights</h2>
+<p>You can ask us to see, correct or delete any message you sent us.{contact_p}</p>""",
                             None, [("Home", "/")]))
+    if CONTACT_ON:
+        parts = [f"<h1>Contact</h1><p>Found a wrong date or a missing holiday, or want to ask a question or make a suggestion? Write to us. When you report a date, please include the country, the holiday and a link to the official source if you have one.</p>"]
+        if CONTACT_KEY:
+            parts.append(f"""<form id="cform" class="form" method="post" action="https://api.web3forms.com/submit">
+<input type="hidden" name="access_key" value="{esc(CONTACT_KEY)}">
+<input type="hidden" name="subject" value="{n} contact form">
+<input type="hidden" name="from_name" value="{n} website">
+<input type="checkbox" name="botcheck" class="hp" tabindex="-1" autocomplete="off" aria-hidden="true">
+<label>Your name<input type="text" name="name" autocomplete="name" required maxlength="100"></label>
+<label>Email address<input type="email" name="email" autocomplete="email" required maxlength="150"></label>
+<label>Topic<select name="topic"><option>Correction to a date</option><option>Question</option><option>Suggestion</option><option>Advertising or partnership</option><option>Other</option></select></label>
+<label>Message<textarea name="message" rows="6" required minlength="10" maxlength="3000"></textarea></label>
+<label class="chk"><input type="checkbox" name="consent" value="yes" required><span>I agree that my message is processed to answer me, as described in the <a href="/privacy/">privacy policy</a>.</span></label>
+<button class="pri" type="submit">Send message</button>
+<p id="cstatus" role="status" aria-live="polite"></p>
+</form>""")
+        if CONTACT_EMAIL:
+            parts.append(f'<p>You can also write to <a href="mailto:{esc(CONTACT_EMAIL)}">{esc(CONTACT_EMAIL)}</a>.</p>')
+        add("/contact/", layout("/contact/", f"Contact {SITE_NAME}", f"Report a wrong date or send a question or suggestion to {SITE_NAME}.",
+                                "".join(parts), None, [("Home", "/")]))
     add("/404.html", layout("/404.html", "Page not found", "Page not found.",
                             '<h1>Page not found</h1><p><a href="/">Back to the start</a></p>'))
 
@@ -606,6 +1013,16 @@ def build_static():
 def main():
     countries = load_countries()
     print("countries:", len(countries))
+    COUNTRIES.extend(countries)
+    for c in countries:
+        REGION_OF[c["cc"]] = region_for(c)
+        seen = set()
+        for r in c["pub"]:
+            if r["global"]:
+                sl = slugify(r["name"])
+                if (c["cc"], sl) not in seen:
+                    seen.add((c["cc"], sl))
+                    HOLIDAY_INDEX.setdefault(sl, []).append((c, r))
     holiday_counts = {}
     for c in countries:
         build_country(c, countries)
@@ -615,6 +1032,9 @@ def main():
     named = build_named()
     monthday = build_monthday()
     build_indexes(countries, named, monthday, holiday_counts)
+    build_faq()
+    build_regions()
+    build_world_months()
     build_static()
 
     if DIST.exists():

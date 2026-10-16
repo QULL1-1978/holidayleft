@@ -98,4 +98,23 @@ if(cf){cf.oninput=function(){
   var q=cf.value.toLowerCase(),items=document.querySelectorAll('#clist li');
   for(var i=0;i<items.length;i++)items[i].style.display=items[i].textContent.toLowerCase().indexOf(q)>-1?'':'none';
 }}
+
+/* contact form */
+var cform=$('cform');
+if(cform&&window.fetch){
+  cform.addEventListener('submit',function(e){
+    e.preventDefault();
+    var st=$('cstatus'),btn=cform.querySelector('button');
+    st.className='';st.textContent='Sending…';btn.disabled=true;
+    var data={};new FormData(cform).forEach(function(v,k){data[k]=v});
+    fetch(cform.action,{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(data)})
+      .then(function(r){return r.json()})
+      .then(function(j){
+        if(j.success){st.className='ok';st.textContent='Thank you. Your message was sent.';cform.reset()}
+        else{st.className='err';st.textContent='Sorry, the message could not be sent. Please try again later.'}
+      })
+      .catch(function(){st.className='err';st.textContent='Sorry, the message could not be sent. Please check your connection and try again.'})
+      .then(function(){btn.disabled=false});
+  });
+}
 })();
