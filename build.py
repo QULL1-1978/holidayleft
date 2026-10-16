@@ -31,7 +31,7 @@ SITE_URL = (os.environ.get("SITE_URL") or "https://holidayleft.com").rstrip("/")
 API = "https://date.nager.at/api/v3"
 REFRESH = "--refresh" in sys.argv
 # Contact form: Web3Forms public access key (safe to keep in the repo) and/or a visible contact address.
-CONTACT_KEY = os.environ.get("CONTACT_KEY") or ""
+CONTACT_KEY = os.environ.get("CONTACT_KEY") or "f2e221ad-2414-4d34-b5ba-c0ae5ff9285b"  # Web3Forms public access key
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or "hello@holidayleft.com"
 OWNER = os.environ.get("OWNER") or "3Sped OÜ"
 CONTACT_ON = bool(CONTACT_KEY or CONTACT_EMAIL)
