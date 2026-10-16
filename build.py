@@ -24,8 +24,8 @@ DATA = ROOT / "data"
 DIST = ROOT / "dist"
 ASSETS = ROOT / "assets"
 
-SITE_NAME = os.environ.get("SITE_NAME", "HolidayLeft")
-SITE_URL = os.environ.get("SITE_URL", "https://holidayleft.com").rstrip("/")
+SITE_NAME = (os.environ.get("SITE_NAME") or "HolidayLeft")
+SITE_URL = (os.environ.get("SITE_URL") or "https://holidayleft.com").rstrip("/")
 API = "https://date.nager.at/api/v3"
 REFRESH = "--refresh" in sys.argv
 
