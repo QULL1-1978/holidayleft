@@ -37,3 +37,22 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
+  indexnow:
+    needs: deploy
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - name: Tell Bing and other IndexNow engines about the site
+        run: |
+          python3 - <<'PY'
+          import json, re, urllib.request
+          host = "holidayleft.com"
+          key = "992175f6395a3aa81e8509c39950a269"
+          sm = urllib.request.urlopen(f"https://{host}/sitemap.xml", timeout=60).read().decode()
+          urls = re.findall(r"<loc>(.*?)</loc>", sm)[:10000]
+          body = json.dumps({"host": host, "key": key, "keyLocation": f"https://{host}/{key}.txt", "urlList": urls}).encode()
+          req = urllib.request.Request("https://api.indexnow.org/indexnow", data=body,
+                                       headers={"Content-Type": "application/json; charset=utf-8"})
+          print(urllib.request.urlopen(req, timeout=60).status, len(urls), "urls")
+          PY

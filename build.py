@@ -89,6 +89,14 @@ def region_for(c):
             "Australia": "Oceania", "Pacific": "Oceania"}.get(pre, "Asia")
 
 
+def fit_title(long, short, limit=66):
+    if len(long) <= limit:
+        return long
+    if len(short) <= limit:
+        return short
+    return short[:limit - 1].rstrip() + "…"
+
+
 def email_link(addr):
     """E-mail shown as text for scrapers; a script turns it into a mailto link in the browser."""
     u, d = addr.split("@", 1)
@@ -173,7 +181,22 @@ LOGO = ('<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32
         '<path d="M11 20l3.2 3L21 17" stroke="#0b6b57" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>')
 
 
+def ld_json(path, crumbs):
+    graph = []
+    if path == "/":
+        graph.append({"@context": "https://schema.org", "@type": "WebSite", "name": SITE_NAME,
+                      "url": SITE_URL + "/", "inLanguage": "en"})
+    if crumbs:
+        graph.append({"@context": "https://schema.org", "@type": "BreadcrumbList",
+                      "itemListElement": [{"@type": "ListItem", "position": i + 1, "name": t, "item": SITE_URL + u}
+                                          for i, (t, u) in enumerate(crumbs)]})
+    return "".join('<script type="application/ld+json">' + json.dumps(g, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/") + "</script>"
+                   for g in graph)
+
+
 def layout(path, title, desc, body, data=None, crumbs=None):
+    if len(desc) > 160:
+        desc = desc[:157].rstrip() + "…"
     CONTACT_LINK = '<br><a href="/contact/">Contact</a>' if CONTACT_ON else ""
     canon = f"{SITE_URL}{path}"
     crumb_html = ""
@@ -197,8 +220,20 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{esc(canon)}">
+<meta property="og:site_name" content="{esc(SITE_NAME)}">
+<meta property="og:locale" content="en_US">
+<meta property="og:image" content="{SITE_URL}/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{esc(title)}">
+<meta name="twitter:description" content="{esc(desc)}">
+<meta name="twitter:image" content="{SITE_URL}/og-image.png">
+{ld_json(path, crumbs)}
 <meta name="theme-color" content="#0b6b57">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <script>try{{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script>
 <link rel="stylesheet" href="/s.css">
 </head>
@@ -388,7 +423,8 @@ def build_country(c, all_countries):
     nxt = upcoming[0] if upcoming else None
     slugs = holiday_slugs(c)
 
-    parts = [f'<div class="pagehead">{flag(c["cc"], True)}<h1>Public holidays in {esc(name)} {YEAR}</h1></div>']
+    parts = [f'<div class="pagehead">{flag(c["cc"], True)}<h1>Public holidays in {esc(name)} {YEAR}</h1></div>',
+             f'<p class="mut" style="margin-top:-6px">Data updated {esc(fmt_date(NOW_UTC.date()))}.</p>']
     if nxt:
         days = (nxt["date"] - today).days
         parts.append(f"""<div class="cd"><p class="lbl">Next public holiday in {esc(name)}</p>
@@ -484,6 +520,14 @@ def build_country(c, all_countries):
                        if reg else f"The holidays listed here apply nationwide. If {esc(name)} has local or regional days off, they are not part of this list.")))
     faq_items.append(("How often is this page updated?",
                       "The whole site is rebuilt every day from the latest data, and the countdown on the page is calculated in your browser, so it stays correct without a reload."))
+    reg_name = REGION_OF[c["cc"]]
+    same = [x for x in COUNTRIES if REGION_OF[x["cc"]] == reg_name and x["cc"] != c["cc"]]
+    if same:
+        pos = sum(1 for x in same if x["name"] < name)
+        rot = same[pos:] + same[:pos]
+        tiles = "".join(f'<li><a href="/holidays/{x["slug"]}/">{flag(x["cc"])} {esc(x["name"])}</a></li>' for x in rot[:12])
+        parts.append(f'<h2>More public holiday calendars in {esc(reg_name)}</h2><ul class="tiles">{tiles}</ul>'
+                     f'<p><a href="/regions/{REGION_SLUG[reg_name]}/">All countries in {esc(reg_name)}</a></p>')
     parts.append(faq_html(faq_items))
 
     dates = [[r["date"].isoformat(), r["name"]] for r in headline(c)]
@@ -491,7 +535,7 @@ def build_country(c, all_countries):
     desc = f"Full list of {name} public holidays for {YEAR} and {YEAR + 1}, long weekends, and a live countdown to the next holiday."
     add(f"/holidays/{s}/", layout(f"/holidays/{s}/", title, desc, "\n".join(parts),
                                   {"type": "country", "tz": c["tz"], "dates": dates},
-                                  [("Home", "/"), ("Countries", "/holidays/"), (name, f"/holidays/{s}/")]))
+                                  [("Home", "/"), (REGION_OF[c["cc"]], f"/regions/{REGION_SLUG[REGION_OF[c['cc']]]}/"), (name, f"/holidays/{s}/")]))
 
 
 def upcoming_table(c, after):
@@ -631,11 +675,11 @@ def build_country_holiday(c):
 <ul class="tiles">{sib_html}</ul>
 {country_nav(c)}"""
         path = f"/days-until/{s}/{sl}/"
-        title = f"Days Until {r0['name']} in {name} – Countdown"
+        title = fit_title(f"{r0['name']} {nxt.year} in {name}: Date and Days Left", f"{r0['name']} in {name}: Days Left")
         desc = f"{r0['name']} in {name} is on {fmt_date(nxt)}. See how many days are left and the dates for the coming years."
         add(path, layout(path, title, desc, body,
                          {"type": "until", "dates": [[r["date"].isoformat(), r["name"]] for r in recs]},
-                         [("Home", "/"), (name, f"/holidays/{s}/"), (r0["name"], path)]))
+                         [("Home", "/"), (REGION_OF[c["cc"]], f"/regions/{REGION_SLUG[REGION_OF[c['cc']]]}/"), (name, f"/holidays/{s}/"), (r0["name"], path)]))
         made.append(sl)
     return made
 
@@ -1082,7 +1126,8 @@ def main():
     today = NOW_UTC.date().isoformat()
     urls = [p for p in pages if not p.endswith(".html")]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
-    sm += [f"<url><loc>{SITE_URL}{u}</loc><lastmod>{today}</lastmod></url>" for u in sorted(urls)]
+    sm += [f"<url><loc>{SITE_URL}{u}</loc>" + (f"<lastmod>{today}</lastmod>" if u.startswith("/is-t") else "") + "</url>"
+           for u in sorted(urls)]
     sm.append("</urlset>")
     (DIST / "sitemap.xml").write_text("\n".join(sm), encoding="utf8")
     (DIST / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}/sitemap.xml\n", encoding="utf8")
