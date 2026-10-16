@@ -1,0 +1,1 @@
+Flag SVGs from flag-icons (https://github.com/lipis/flag-icons), MIT License, Copyright (c) 2013 Panayiotis Lipiridis.

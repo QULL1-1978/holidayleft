@@ -50,8 +50,21 @@ def esc(s):
     return html.escape(str(s), quote=True)
 
 
-def flag(cc):
-    return "".join(chr(0x1F1E6 + ord(c) - 65) for c in cc.upper())
+def flag(cc, big=False):
+    cls = "fl fl-lg" if big else "fl"
+    w, h = (48, 36) if big else (24, 18)
+    return f'<img class="{cls}" src="/flags/{cc.lower()}.svg" alt="" width="{w}" height="{h}" loading="lazy">'
+
+
+EMOJI = {
+    "christmas": "🎄", "christmas-eve": "🎁", "new-years-eve": "🥂", "new-years-day": "🎆",
+    "valentines-day": "💝", "st-patricks-day": "🍀", "easter": "🐣", "good-friday": "✝️",
+    "easter-monday": "🌷", "april-fools-day": "🃏", "earth-day": "🌍", "mothers-day-us": "💐",
+    "fathers-day-us": "👔", "memorial-day": "🎖️", "independence-day-us": "🎇", "labor-day-us": "🛠️",
+    "halloween": "🎃", "thanksgiving-us": "🦃", "black-friday": "🛍️", "cyber-monday": "💻",
+    "summer-solstice": "☀️", "winter-solstice": "❄️",
+}
+NAMED_DATES = {}
 
 
 def fmt_date(d, weekday=True):
@@ -107,6 +120,12 @@ def country_tz():
 
 
 # ---------------------------------------------------------------- layout
+LOGO = ('<svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#0b6b57"/>'
+        '<rect x="6" y="9" width="20" height="17" rx="3" fill="#fff"/><rect x="6" y="9" width="20" height="5" rx="2" fill="#e8962b"/>'
+        '<rect x="10" y="5" width="2.5" height="6" rx="1.2" fill="#fff"/><rect x="19.5" y="5" width="2.5" height="6" rx="1.2" fill="#fff"/>'
+        '<path d="M11 20l3.2 3L21 17" stroke="#0b6b57" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>')
+
+
 def layout(path, title, desc, body, data=None, crumbs=None):
     canon = f"{SITE_URL}{path}"
     crumb_html = ""
@@ -130,18 +149,25 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <meta property="og:description" content="{esc(desc)}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="{esc(canon)}">
+<meta name="theme-color" content="#0b6b57">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{{var t=localStorage.getItem("theme");if(t)document.documentElement.setAttribute("data-theme",t)}}catch(e){{}}</script>
 <link rel="stylesheet" href="/s.css">
 </head>
 <body>
-<header><a class="logo" href="/">📅 {esc(SITE_NAME)}</a>
-<nav><a href="/holidays/">Countries</a><a href="/days-until/">Days until</a></nav></header>
+<header class="site"><div class="hd">
+<a class="logo" href="/">{LOGO}{esc(SITE_NAME)}</a>
+<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/days-until/">Days until</a>
+<button id="theme" type="button" aria-label="Switch between light and dark mode" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button></nav>
+</div></header>
 <main>
 {crumb_html}
 {body}
 </main>
 <footer>
-<p>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p>
-<p><a href="/about/">About</a> · <a href="/privacy/">Privacy</a> · © {YEAR} {esc(SITE_NAME)}</p>
+<div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/days-until/">Days until</a><br><a href="/about/">About</a><br><a href="/privacy/">Privacy</a></p></div>
+<p>© {YEAR} {esc(SITE_NAME)}</p>
 </footer>
 {data_html}
 <script src="/s.js" defer></script>
@@ -214,10 +240,9 @@ def next_on_or_after(dates, d):
 
 def until_block(days, when, extra=""):
     unit = "day" if days == 1 else "days"
-    return f"""<div class="card">
+    return f"""<div class="cd">
 <div class="big"><span id="days">{days}</span><small id="unit">{unit}</small></div>
-<p style="margin:10px 0 0"><strong id="when">{esc(when)}</strong></p>
-<p class="mut" id="wk" style="margin:4px 0 0">{extra}</p>
+<div class="cd-info"><strong id="when">{esc(when)}</strong><span class="mut" id="wk">{extra}</span></div>
 </div>"""
 
 
@@ -315,14 +340,13 @@ def build_country(c, all_countries):
     nxt = upcoming[0] if upcoming else None
     slugs = holiday_slugs(c)
 
-    parts = [f'<h1>{flag(c["cc"])} Public holidays in {esc(name)} {YEAR}</h1>']
+    parts = [f'<div class="pagehead">{flag(c["cc"], True)}<h1>Public holidays in {esc(name)} {YEAR}</h1></div>']
     if nxt:
         days = (nxt["date"] - today).days
-        parts.append(f"""<div class="card"><p class="mut" style="margin:0">Next public holiday in {esc(name)}</p>
-<h2 style="margin:4px 0 8px" id="nname">{esc(nxt["name"])}</h2>
+        parts.append(f"""<div class="cd"><p class="lbl">Next public holiday in {esc(name)}</p>
+<h2 id="nname">{esc(nxt["name"])}</h2>
 <div class="big"><span id="days">{days}</span><small id="unit">{"day" if days == 1 else "days"}</small></div>
-<p style="margin:10px 0 0"><strong id="when">{esc(fmt_date(nxt["date"]))}</strong></p>
-<p class="mut" id="wk" style="margin:4px 0 0">{wk_text(days)}</p></div>""")
+<div class="cd-info"><strong id="when">{esc(fmt_date(nxt["date"]))}</strong><span class="mut" id="wk">{wk_text(days)}</span></div></div>""")
     parts.append(country_nav(c))
 
     for y in YEARS:
@@ -390,14 +414,16 @@ def build_isday(c, offset):
     nxt_html = ""
     if nxt:
         d = (nxt["date"] - today).days
-        nxt_html = f"""<h2>Next public holiday in {esc(name)}</h2>
-<p><strong id="nname">{esc(nxt["name"])}</strong> on <span id="nwhen">{esc(fmt_date(nxt["date"]))}</span> – in <span id="ndays">{plural(d, "day")}</span>.</p>"""
+        nxt_html = f"""<div class="cd"><p class="lbl">Next public holiday in {esc(name)}</p>
+<h2 id="nname">{esc(nxt["name"])}</h2>
+<div class="big"><span id="ndays">{d}</span><small id="nunit">{"day" if d == 1 else "days"}</small></div>
+<div class="cd-info"><strong id="nwhen">{esc(fmt_date(nxt["date"]))}</strong></div></div>"""
     other = "tomorrow" if offset == 0 else "today"
     other_path = f"/is-{other}-a-holiday-in-{s}/"
-    body = f"""<h1>Is {word} a public holiday in {esc(name)}?</h1>
-<div class="card" style="text-align:center">
+    body = f"""<div class="pagehead">{flag(c["cc"], True)}<h1>Is {word} a public holiday in {esc(name)}?</h1></div>
+<div class="card answer">
 <div><span class="ans {cls}" id="ans">{ans}</span></div>
-<p style="margin:14px 0 0"><strong id="target">{esc(fmt_date(target))}</strong></p>
+<p style="margin:18px 0 0;font-size:19px"><strong id="target">{esc(fmt_date(target))}</strong></p>
 <p class="mut" id="detail" style="margin:4px 0 0">{esc(detail)}</p>
 </div>
 {nxt_html}
@@ -437,7 +463,7 @@ def build_country_holiday(c):
 <h2>{esc(r0["name"])} dates in {esc(name)}</h2>
 <div class="tw"><table><tr><th>Date</th><th>Applies</th></tr>{rows}</table></div>
 <h2>More {esc(name)} holidays</h2>
-<ul class="grid">{sib_html}</ul>
+<ul class="tiles">{sib_html}</ul>
 {country_nav(c)}"""
         path = f"/days-until/{s}/{sl}/"
         title = f"Days Until {r0['name']} in {name} – Countdown"
@@ -469,6 +495,7 @@ def build_named():
                          body, {"type": "until", "dates": [[d.isoformat(), title] for d in dates]},
                          [("Home", "/"), ("Days until", "/days-until/"), (title, path)]))
         links.append((sl, title))
+        NAMED_DATES[sl] = [d.isoformat() for d in dates]
     return links
 
 
@@ -508,31 +535,52 @@ def build_monthday():
 
 def build_indexes(countries, named, monthday, holiday_counts):
     opts = "".join(
-        f'<option value="/holidays/{c["slug"]}/" data-cc="{c["cc"]}">{flag(c["cc"])} {esc(c["name"])}</option>'
+        f'<option value="/holidays/{c["slug"]}/" data-cc="{c["cc"]}">{esc(c["name"])}</option>'
         for c in countries)
     clist = "".join(
         f'<li><a href="/holidays/{c["slug"]}/">{flag(c["cc"])} {esc(c["name"])}</a></li>' for c in countries)
-    pop = "".join(f'<li><a href="/days-until/{sl}/">{esc(t)}</a></li>' for sl, t in named[:12])
-    body = f"""<h1>Is it a public holiday? Check any country, any day</h1>
-<p>Pick a country to see today's status, the next public holiday and a live countdown. {len(countries)} countries, updated daily.</p>
-<div class="card"><div class="row"><select id="cs" aria-label="Country">{opts}</select><button id="go" type="button">Show holidays</button></div></div>
-<h2>Popular countdowns</h2>
-<ul class="grid">{pop}</ul>
-<p><a href="/days-until/">See all countdowns</a></p>
-<h2>All countries</h2>
-<ul class="grid">{clist}</ul>"""
+    today = NOW_UTC.date()
+
+    def ev_tile(sl, t):
+        dates = NAMED_DATES[sl]
+        nx = next((d for d in dates if d >= today.isoformat()), dates[-1])
+        n = (dt.date.fromisoformat(nx) - today).days
+        txt = "today" if n == 0 else "tomorrow" if n == 1 else f"in {n} days"
+        return (f'<li><a href="/days-until/{sl}/" data-dates="{",".join(dates)}">'
+                f'<span class="em">{EMOJI.get(sl, "📅")}</span><span class="t">{esc(t)}</span>'
+                f'<span class="dl">{txt}</span></a></li>')
+
+    pop = "".join(ev_tile(sl, t) for sl, t in named[:12])
+    flt = '<input type="search" id="cf" class="filter" placeholder="Filter countries…" aria-label="Filter countries">'
+    body = f"""<section class="hero">
+<span class="eyebrow">{len(countries)} countries · updated daily</span>
+<h1>Is it a public holiday?</h1>
+<p class="lead">Check today, tomorrow or the next day off in any country, and count down the days.</p>
+<div class="search"><select id="cs" aria-label="Country">{opts}</select><button class="pri" id="go" type="button">Show holidays</button></div>
+<div id="me" class="me" hidden>
+<div class="who"><img id="me-flag" class="fl fl-lg" src="/flags/ee.svg" alt="" width="48" height="36"><span id="me-title"></span></div>
+<div class="res"><strong id="me-ans"></strong><span class="mut" id="me-detail"></span></div>
+<a class="go" id="me-go" href="/holidays/">All holidays →</a>
+</div>
+</section>
+<h2>Count down to…</h2>
+<ul class="tiles ev">{pop}</ul>
+<p><a href="/days-until/">See all countdowns, including any date of the year →</a></p>
+<h2>Browse by country</h2>
+{flt}
+<ul class="tiles" id="clist">{clist}</ul>"""
     add("/", layout("/", f"{SITE_NAME}: Public Holidays and Days Until Countdowns",
                     f"Is today a public holiday? Check {len(countries)} countries, see the next holiday and count the days until Christmas, Easter or any date.",
                     body))
     add("/holidays/", layout("/holidays/", f"Public Holidays by Country {YEAR}",
                              f"Public holiday calendars for {len(countries)} countries in {YEAR} and {YEAR + 1}.",
-                             f"<h1>Public holidays by country</h1><ul class=\"grid\">{clist}</ul>", None,
+                             f"<h1>Public holidays by country</h1>{flt}<ul class=\"tiles\" id=\"clist\">{clist}</ul>", None,
                              [("Home", "/")]))
-    nl = "".join(f'<li><a href="/days-until/{sl}/">{esc(t)}</a></li>' for sl, t in named)
+    nl = "".join(ev_tile(sl, t) for sl, t in named)
     ml = "".join(f'<li><a href="/days-until/{sl}/">{esc(t)}</a></li>' for sl, t in monthday)
     add("/days-until/", layout("/days-until/", "Days Until Countdowns: Holidays and Any Date",
                                "How many days until Christmas, Easter, Halloween or any date of the year? Live countdowns in days and weeks.",
-                               f"<h1>Days until…</h1><h2>Holidays and events</h2><ul class=\"grid\">{nl}</ul><h2>Any date</h2><ul class=\"grid\">{ml}</ul>",
+                               f"<h1>Days until…</h1><h2>Holidays and events</h2><ul class=\"tiles ev\">{nl}</ul><h2>Any date</h2><ul class=\"grid\">{ml}</ul>",
                                None, [("Home", "/")]))
 
 
@@ -580,7 +628,23 @@ def main():
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(text, encoding="utf8")
     for f in ASSETS.iterdir():
-        shutil.copy(f, DIST / f.name)
+        if f.is_dir():
+            shutil.copytree(f, DIST / f.name)
+        else:
+            shutil.copy(f, DIST / f.name)
+    (DIST / "d").mkdir()
+    for c in countries:
+        hmap = {}
+        for r in c["pub"]:
+            key = r["date"].isoformat()
+            if key not in hmap or (r["global"] and not hmap[key]["g"]):
+                hmap[key] = {"n": r["name"], "g": r["global"]}
+        blob = {"cc": c["cc"], "n": c["name"], "slug": c["slug"], "tz": c["tz"], "h": hmap,
+                "dates": [[r["date"].isoformat(), r["name"]] for r in headline(c)]}
+        (DIST / "d" / f'{c["cc"].lower()}.json').write_text(
+            json.dumps(blob, ensure_ascii=False, separators=(",", ":")), encoding="utf8")
+    shutil.copy(DATA / "zone_cc.json", DIST / "d" / "tz.json")
+    (DIST / "favicon.svg").write_text(LOGO.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1), encoding="utf8")
 
     today = NOW_UTC.date().isoformat()
     urls = [p for p in pages if not p.endswith(".html")]
