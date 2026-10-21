@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 """Staatilise saidi generaator: pühad + päevaloendurid.
 
 Kasutus:
@@ -980,7 +980,7 @@ def build_world_months():
                                    None, [("Home", "/")]))
 
 
-VTK_CONTACT = "andre@hobisport.ee"
+VTK_CONTACT = "andre@3sped.ee"
 VTK_UPDATED = NOW_UTC.date().isoformat()
 
 
