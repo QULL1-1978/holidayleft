@@ -34,6 +34,7 @@ REFRESH = "--refresh" in sys.argv
 CONTACT_KEY = os.environ.get("CONTACT_KEY") or "f2e221ad-2414-4d34-b5ba-c0ae5ff9285b"  # Web3Forms public access key
 CONTACT_EMAIL = os.environ.get("CONTACT_EMAIL") or "hello@holidayleft.com"
 OWNER = os.environ.get("OWNER") or "3Sped OÜ"
+NOINDEX = set()  # paths that must not be indexed or listed in the sitemap
 GA_ID = os.environ.get("GA_ID") or "G-638VP6DVLH"   # Google Analytics 4 measurement ID (loaded only after consent)
 CONTACT_ON = bool(CONTACT_KEY or CONTACT_EMAIL)
 
@@ -232,6 +233,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <meta name="twitter:image" content="{SITE_URL}/og-image.png">
 {ld_json(path, crumbs)}
 <meta name="theme-color" content="#0b6b57">
+{'<meta name="robots" content="noindex,follow">' if path in NOINDEX else ""}
 <meta name="msvalidate.01" content="07E77E2420E74B43C4CA521A5BFFC0DF">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -978,6 +980,75 @@ def build_world_months():
                                    None, [("Home", "/")]))
 
 
+VTK_CONTACT = "andre@hobisport.ee"
+VTK_UPDATED = NOW_UTC.date().isoformat()
+
+
+def build_video_toolkit():
+    n = "Video Toolkit"
+    owner = esc(OWNER)
+    mail = f'<a href="mailto:{VTK_CONTACT}">{VTK_CONTACT}</a>'
+    nav = ('<p class="mut"><a href="/video-toolkit/">Video Toolkit</a> · <a href="/video-toolkit/privacy/">Privacy Policy</a> · '
+           '<a href="/video-toolkit/terms/">Terms of Service</a></p>')
+    for path in ("/video-toolkit/", "/video-toolkit/privacy/", "/video-toolkit/terms/"):
+        NOINDEX.add(path)
+
+    home = f"""<h1>{n}</h1>
+<p>{n} is a personal desktop tool operated by {owner} (Estonia) for the owner's own use. It edits videos on the owner's computer and, when the owner starts it, uploads the owner's own videos to the owner's own YouTube channels using the YouTube Data API.</p>
+<p>It is not offered to the public and has no other users. There is nothing to download or sign up for on this website.</p>
+<h2>How it uses Google and YouTube</h2>
+<p>When the owner connects the tool to a YouTube channel, Google asks for permission to upload videos and to manage video settings, subtitles, playlists and thumbnails on that channel. The tool only acts on the Google account and the channels that the owner has chosen to connect. Details are in the <a href="/video-toolkit/privacy/">Privacy Policy</a>.</p>
+<h2>Contact</h2>
+<p>Operator: {owner}, Estonia. Email: {mail}.</p>
+{nav}"""
+    add("/video-toolkit/", layout("/video-toolkit/", f"{n} – personal tool by {OWNER}",
+                                  f"{n} is a personal desktop tool for editing the owner's videos and uploading them to the owner's own YouTube channels.",
+                                  home, None, [("Home", "/"), (n, "/video-toolkit/")]))
+
+    privacy = f"""<h1>{n} Privacy Policy</h1>
+<p class="mut">Last updated: {VTK_UPDATED}</p>
+<p>{n} is a personal desktop tool operated by {owner} (Estonia) for the owner's own use. This policy explains what happens to Google and YouTube data when the owner connects the tool to a YouTube account.</p>
+<h2>What access is requested</h2>
+<p>{n} asks Google for two permissions, only for the owner's own Google account and the YouTube channels the owner chooses:</p>
+<ul>
+<li><code>youtube.upload</code>: to upload videos to the owner's channel.</li>
+<li><code>youtube.force-ssl</code>: to manage subtitles, playlists, thumbnails and video settings on the owner's channel.</li>
+</ul>
+<h2>What data is collected, used and shared</h2>
+<p>{n} does not collect, sell or share anyone's personal data. It has no other users. Access tokens that Google issues after the owner approves access are stored only on the owner's own computer. They are not sent to or stored on any server, and this website does not receive or store any YouTube or Google user data.</p>
+<p>The tool uses the access only to perform the actions the owner starts in the tool, such as uploading an edited video. It does not use the data for advertising and does not transfer it to anyone else.</p>
+<h2>Google API Services User Data Policy</h2>
+<p>{n}'s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" rel="noopener">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+<h2>YouTube API Services</h2>
+<p>{n} uses YouTube API Services. By using it, the owner is bound by the <a href="https://developers.google.com/youtube/terms/api-services-terms-of-service" rel="noopener">YouTube API Services Terms of Service</a> and the <a href="https://policies.google.com/privacy" rel="noopener">Google Privacy Policy</a>.</p>
+<h2>Revoking access and deleting data</h2>
+<p>Access can be withdrawn at any time at <a href="https://myaccount.google.com/permissions" rel="noopener">myaccount.google.com/permissions</a>. Deleting the tool's local settings on the owner's computer removes the stored tokens.</p>
+<h2>Contact</h2>
+<p>Questions about this policy: {mail}.</p>
+{nav}"""
+    add("/video-toolkit/privacy/", layout("/video-toolkit/privacy/", f"{n} Privacy Policy",
+                                          f"Privacy policy of {n}, a personal tool that uploads the owner's own videos to YouTube.",
+                                          privacy, None, [("Home", "/"), (n, "/video-toolkit/"), ("Privacy Policy", "/video-toolkit/privacy/")]))
+
+    terms = f"""<h1>{n} Terms of Service</h1>
+<p class="mut">Last updated: {VTK_UPDATED}</p>
+<p>{n} is a personal tool operated by {owner} (Estonia) for the owner's own use. It is not a public service and is not offered to third parties.</p>
+<h2>As is</h2>
+<p>The tool is provided "as is", without warranty of any kind, express or implied. {owner} is not liable for any loss or damage that results from using it.</p>
+<h2>Responsibility for content</h2>
+<p>The owner is responsible for the videos and other content that the tool processes or uploads, and for following the <a href="https://www.youtube.com/t/terms" rel="noopener">YouTube Terms of Service</a>, the <a href="https://developers.google.com/youtube/terms/api-services-terms-of-service" rel="noopener">YouTube API Services Terms of Service</a> and any applicable law.</p>
+<h2>Privacy</h2>
+<p>How the tool handles Google and YouTube data is described in the <a href="/video-toolkit/privacy/">Privacy Policy</a>.</p>
+<h2>Changes</h2>
+<p>These terms may change. The current version is always on this page.</p>
+<h2>Contact</h2>
+<p>{mail}</p>
+{nav}"""
+    add("/video-toolkit/terms/", layout("/video-toolkit/terms/", f"{n} Terms of Service",
+                                        f"Terms of service of {n}, a personal tool operated by {OWNER}.",
+                                        terms, None, [("Home", "/"), (n, "/video-toolkit/"), ("Terms of Service", "/video-toolkit/terms/")]))
+
+
 def build_static():
     n = esc(SITE_NAME)
     contact_p = ' If something looks wrong, <a href="/contact/">tell us</a> and we will check it.' if CONTACT_ON else ""
@@ -1074,6 +1145,12 @@ def build_static():
                             '<h1>Page not found</h1><p><a href="/">Back to the start</a></p>'))
 
 
+def _clear_readonly(func, path, _exc):
+    """Windows: clear the read-only flag (set on folders by sync tools) and retry the delete."""
+    os.chmod(path, 0o700)
+    func(path)
+
+
 # ---------------------------------------------------------------- main
 def main():
     countries = load_countries()
@@ -1101,9 +1178,10 @@ def main():
     build_regions()
     build_world_months()
     build_static()
+    build_video_toolkit()
 
     if DIST.exists():
-        shutil.rmtree(DIST)
+        shutil.rmtree(DIST, onerror=_clear_readonly)
     DIST.mkdir()
     for path, text in pages.items():
         if path.endswith(".html"):
@@ -1132,7 +1210,7 @@ def main():
     (DIST / "favicon.svg").write_text(LOGO.replace("<svg ", '<svg xmlns="http://www.w3.org/2000/svg" ', 1), encoding="utf8")
 
     today = NOW_UTC.date().isoformat()
-    urls = [p for p in pages if not p.endswith(".html")]
+    urls = [p for p in pages if not p.endswith(".html") and p not in NOINDEX]
     sm = ['<?xml version="1.0" encoding="UTF-8"?>', '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     sm += [f"<url><loc>{SITE_URL}{u}</loc>" + (f"<lastmod>{today}</lastmod>" if u.startswith("/is-t") else "") + "</url>"
            for u in sorted(urls)]
