@@ -189,3 +189,14 @@ EVENTS = [
      "about": "The Indoor Cycling World Championships include artistic cycling and cycle-ball. In 2027 they are held in La Roche-sur-Foron as part of the Super Worlds.",
      "editions": [{"name": "La Roche-sur-Foron 2027", "start": "2027-09-03", "end": "2027-09-05", "place": "La Roche-sur-Foron, France", "status": C, "source": UCI_CAL}]},
 ]
+
+
+# Mass-participation events live in events_mass.py and are shown in the separate /mass-events/ section.
+from events_mass import CATEGORIES as _MASS_CATEGORIES, EVENTS as _MASS_EVENTS  # noqa: E402
+
+CATEGORIES.extend(_MASS_CATEGORIES)
+EVENTS.extend(_MASS_EVENTS)
+
+for _e in EVENTS:
+    if _e["slug"] == "tour-de-france":
+        _e["see_also"] = ["etape-du-tour"]
