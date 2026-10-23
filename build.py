@@ -20,6 +20,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import content as TXT
+import events_data as EVD
 
 ROOT = Path(__file__).parent
 DATA = ROOT / "data"
@@ -244,7 +245,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <body data-ga="{esc(GA_ID)}">
 <header class="site"><div class="hd">
 <a class="logo" href="/">{LOGO}{esc(SITE_NAME)}</a>
-<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/days-until/">Days until</a>
+<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/sports/">Sports</a><a class="hide-s" href="/days-until/">Days until</a>
 <button id="theme" type="button" aria-label="Switch between light and dark mode" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button></nav>
 </div></header>
 <main>
@@ -253,7 +254,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 </main>
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
-<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/sports/">Sports countdowns</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
 <p>© {YEAR} {esc(SITE_NAME)} · operated by {esc(OWNER)}</p>
 </footer>
 <div id="cc" class="cc" role="dialog" aria-live="polite" aria-label="Cookie choices" hidden>
@@ -836,6 +837,7 @@ def build_indexes(countries, named, monthday, holiday_counts):
                 f'<span class="dl">{txt}</span></a></li>')
 
     pop = "".join(ev_tile(sl, t) for sl, t in named[:12])
+    sports_tiles = "".join(sp_tile(r, rd, today) for r, rd in SPORTS_UPCOMING[:8])
     flt = '<input type="search" id="cf" class="filter" placeholder="Filter countries…" aria-label="Filter countries">'
     body = f"""<section class="hero">
 <span class="eyebrow">{len(countries)} countries · updated daily</span>
@@ -851,6 +853,9 @@ def build_indexes(countries, named, monthday, holiday_counts):
 <h2>Count down to…</h2>
 <ul class="tiles ev">{pop}</ul>
 <p><a href="/days-until/">See all countdowns, including any date of the year →</a></p>
+<h2>Sports countdowns</h2>
+<ul class="tiles ev">{sports_tiles}</ul>
+<p><a href="/sports/">All sports events: Olympics, World Cups, Tour de France and more →</a></p>
 <h2>How {esc(SITE_NAME)} works</h2>
 <div class="steps">
 <div><b>1</b><h3>Pick a country</h3><p>Choose from {len(countries)} countries and territories, or let the page detect yours.</p></div>
@@ -878,6 +883,168 @@ def build_indexes(countries, named, monthday, holiday_counts):
                                "How many days until Christmas, Easter, Halloween or any date of the year? Live countdowns in days and weeks.",
                                f"<h1>Days until…</h1><h2>Holidays and events</h2><ul class=\"tiles ev\">{nl}</ul><h2>Any date</h2><ul class=\"grid\">{ml}</ul>",
                                None, [("Home", "/")]))
+
+
+SPORTS_UPCOMING = []   # (series, edition) for the home page, soonest first
+
+
+def _d(x):
+    return dt.date.fromisoformat(x)
+
+
+def sp_pick(series, today):
+    for ed in series["editions"]:
+        e = _d(ed["end"] or ed["start"])
+        if e >= today:
+            return ed
+    return None
+
+
+def sp_range(ed):
+    a = _d(ed["start"])
+    if not ed["end"] or ed["end"] == ed["start"]:
+        return fmt_date(a)
+    b = _d(ed["end"])
+    if a.year == b.year and a.month == b.month:
+        return f"{a.day}–{b.day} {MONTHS[a.month - 1]} {b.year}"
+    if a.year == b.year:
+        return f"{a.day} {MONTHS[a.month - 1]} – {b.day} {MONTHS[b.month - 1]} {b.year}"
+    return f"{a.day} {MONTHS[a.month - 1]} {a.year} – {b.day} {MONTHS[b.month - 1]} {b.year}"
+
+
+def sp_pill(ed):
+    if ed["status"] == "confirmed":
+        return '<span class="pill">Dates confirmed</span>'
+    return '<span class="pill reg">Provisional dates</span>'
+
+
+def sp_countdown(ed, today):
+    """-> (state label, number, unit) for the static fallback; JS recalculates in the browser."""
+    a = _d(ed["start"])
+    b = _d(ed["end"] or ed["start"])
+    if a <= today <= b:
+        n = (b - today).days
+        return "Happening now: days left", n
+    n = (a - today).days
+    return f"Days until the start", n
+
+
+def sp_tile(series, ed, today):
+    cat_emoji = {c[0]: c[2] for c in EVD.CATEGORIES}[series["cat"]]
+    if ed is None:
+        txt, dat = "dates to be announced", ""
+    else:
+        a = _d(ed["start"])
+        b = _d(ed["end"] or ed["start"])
+        if a <= today <= b:
+            txt = "on now"
+        else:
+            n = (a - today).days
+            txt = "tomorrow" if n == 1 else f"in {n} days"
+        dat = f"{ed['start']}|{ed['end'] or ed['start']}"
+    attr = f' data-ev="{dat}"' if dat else ""
+    sub = f'<span class="mut" style="font-size:13px">{esc(sp_range(ed))}</span>' if ed else ""
+    return (f'<li><a href="/sports/{series["slug"]}/"{attr}><span class="em">{cat_emoji}</span>'
+            f'<span class="t">{esc(series["name"])}</span><span class="dl">{txt}</span>{sub}</a></li>')
+
+
+def build_sports():
+    today = NOW_UTC.date()
+    by_slug = {e["slug"]: e for e in EVD.EVENTS}
+    cats = {c[0]: c for c in EVD.CATEGORIES}
+    picked = []
+    for ev in EVD.EVENTS:
+        ed = sp_pick(ev, today)
+        if ed is None:
+            print("WARNING: no upcoming edition for", ev["slug"])
+        picked.append((ev, ed))
+    up = [(ev, ed) for ev, ed in picked if ed and _d(ed["start"]) >= today]
+    up.sort(key=lambda x: x[1]["start"])
+    SPORTS_UPCOMING[:] = up
+
+    for ev, ed in picked:
+        name, slug = ev["name"], ev["slug"]
+        cat_title = cats[ev["cat"]][1]
+        if ed is None:
+            body = (f"<h1>How many days until {esc(name)}?</h1><p>We have no upcoming edition listed yet. "
+                    f"The next dates will be added when they are announced.</p>")
+            add(f"/sports/{slug}/", layout(f"/sports/{slug}/", f"{name}: next dates", f"Dates of the next {name}.",
+                                           body, None, [("Home", "/"), ("Sports", "/sports/"), (name, f"/sports/{slug}/")]))
+            continue
+        a, b = _d(ed["start"]), _d(ed["end"] or ed["start"])
+        state, n = sp_countdown(ed, today)
+        unit = "day" if n == 1 else "days"
+        length = (b - a).days + 1
+        rng = sp_range(ed)
+        note = f"<p class=\"mut\">{esc(ed['note'])}</p>" if ed.get("note") else ""
+        cd = f"""<div class="cd"><p class="lbl" id="state">{esc(state)}</p>
+<h2 id="ename">{esc(ed["name"])}</h2>
+<div class="big"><span id="days">{n}</span><small id="unit">{unit}</small></div>
+<div class="cd-info"><strong id="when">{esc(rng)}</strong><span class="mut">{esc(ed["place"])}</span></div></div>"""
+        facts = f"""<div class="stats">
+<div><b>{WD[a.weekday()][:3]}</b><span>day of the week it starts</span></div>
+<div><b>{length}</b><span>{"day" if length == 1 else "days"} long</span></div>
+<div><b>{a.year}</b><span>next edition</span></div>
+</div>"""
+        src = f'<a href="{esc(ed["source"])}" rel="noopener">source</a>'
+        status_line = (f"<p>{sp_pill(ed)} Dates checked on {esc(fmt_date(_d(EVD.CHECKED), False))} ({src}). "
+                       f"Organisers can change dates, so check the official website before you plan travel or tickets.</p>{note}")
+        rows = "".join(
+            f'<tr><td>{esc(x["name"])}</td><td>{esc(sp_range(x))}</td><td>{esc(x["place"])}</td><td>{sp_pill(x)}</td></tr>'
+            for x in ev["editions"])
+        faq = faq_html([
+            (f"When is the next {name}?", f"The next edition, {esc(ed['name'])}, takes place {esc(rng)}. " +
+             ("The dates are confirmed." if ed["status"] == "confirmed" else "The dates are still provisional, see the note on this page.")),
+            (f"Where is the next {name}?", f"{esc(ed['place'])}."),
+            (f"How long does the {name} last?", f"The edition shown here lasts {length} {'day' if length == 1 else 'days'}, from {esc(fmt_date(a))}" +
+             ("." if length == 1 else f" to {esc(fmt_date(b))}.")),
+            (f"What day of the week does the {name} start?", f"{esc(WD[a.weekday()])}, {esc(fmt_date(a, False))}."),
+            (f"How many days until the {name}?", "The live counter at the top of this page shows the days left. It is calculated from your device's date, so it is always current."),
+        ])
+        rel = [(r, rd) for r, rd in picked if r["cat"] == ev["cat"] and r["slug"] != slug and rd]
+        rel.sort(key=lambda x: x[1]["start"])
+        rel_html = ""
+        if rel:
+            rel_html = (f"<h2>More in {esc(cat_title)}</h2><ul class=\"tiles ev\">" +
+                        "".join(sp_tile(r, rd, today) for r, rd in rel[:8]) + "</ul>")
+        body = f"""<h1>How many days until the {esc(name)}?</h1>
+{cd}
+{facts}
+{status_line}
+<h2>About the {esc(name)}</h2>
+<p>{esc(ev["about"])}</p>
+<h2>Dates and places</h2>
+<div class="tw"><table><tr><th>Edition</th><th>Dates</th><th>Place</th><th>Status</th></tr>{rows}</table></div>
+{rel_html}
+{faq}
+<p><a href="/sports/">All sports countdowns</a> · <a href="/days-until/">Days until holidays and any date</a></p>"""
+        title = fit_title(f"{name} {a.year}: Date and Days Left", f"{name}: Days Left")
+        desc = f"{name} {ed['name']}: {rng}. Live countdown in days, plus location, length and whether the dates are confirmed."
+        add(f"/sports/{slug}/", layout(f"/sports/{slug}/", title, desc, body,
+                                       {"type": "event", "eds": [[x["start"], x["end"] or x["start"], x["name"]] for x in ev["editions"]]},
+                                       [("Home", "/"), ("Sports", "/sports/"), (name, f"/sports/{slug}/")]))
+
+    # hub page
+    soon = "".join(sp_tile(r, rd, today) for r, rd in SPORTS_UPCOMING[:8])
+    groups = ""
+    for cid, ctitle, emoji in EVD.CATEGORIES:
+        items = [(r, rd) for r, rd in picked if r["cat"] == cid]
+        items.sort(key=lambda x: x[1]["start"] if x[1] else "9999")
+        groups += f"<h2>{emoji} {esc(ctitle)}</h2><ul class=\"tiles ev\">" + "".join(sp_tile(r, rd, today) for r, rd in items) + "</ul>"
+    faq = faq_html([
+        ("Where do the dates come from?", "From the organisers or governing bodies where they have published them, and otherwise from reliable cycling and sports media. Each event page links to its source and says whether the dates are confirmed or provisional."),
+        ("How often are the dates updated?", f"The dates were last checked on {esc(fmt_date(_d(EVD.CHECKED), False))}. When an edition finishes, the next one is added, and the countdowns on the pages are calculated live in your browser."),
+        ("Why are some dates marked provisional?", "Some organisers have not yet confirmed final dates, or published sources disagree by a day or two. We show the best available date and flag it, so you know to check the official site before you book."),
+    ])
+    body = f"""<h1>Sports countdowns</h1>
+<p>How many days until the next Olympic Games, the football World Cup, the Tour de France or the cycling World Championships? Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
+<h2>Coming up next</h2>
+<ul class="tiles ev">{soon}</ul>
+{groups}
+{faq}"""
+    add("/sports/", layout("/sports/", "Sports Countdowns: Olympics, World Cups, Tour de France and More",
+                           "Live countdowns to the Olympic Games, football World Cups, Grand Slams, the Tour de France, the cycling Monuments and the UCI World Championships.",
+                           body, None, [("Home", "/")]))
 
 
 def build_faq():
@@ -1173,6 +1340,7 @@ def main():
         holiday_counts[c["cc"]] = build_country_holiday(c)
     named = build_named()
     monthday = build_monthday()
+    build_sports()
     build_indexes(countries, named, monthday, holiday_counts)
     build_faq()
     build_regions()

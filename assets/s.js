@@ -37,6 +37,16 @@ if(el){
       if($('wk'))set('wk',diff>=7?'That is '+plural(Math.floor(diff/7),'week')+(diff%7?' and '+plural(diff%7,'day'):'')+'.':(diff===0?'That is today!':''));
     }
   }
+  if(D.type==='event'){
+    var te=today(),cur=null;
+    for(var q=0;q<D.eds.length;q++){if(D.eds[q][1]>=te){cur=D.eds[q];break}}
+    if(cur){
+      var on=cur[0]<=te,dd=on?dn(cur[1])-dn(te):dn(cur[0])-dn(te);
+      set('days',String(dd));set('unit',dd===1?'day':'days');
+      set('state',on?'Happening now: days left':'Days until the start');
+      set('ename',cur[2]);
+    }
+  }
   if(D.type==='isday'){
     var t0=today(D.tz),tg=iso(dn(t0)+D.offset),h=D.h[tg],a=$('ans');
     if(a){a.textContent=h?(h.g?'Yes':'Partly'):'No';a.className='ans '+(h?'yes':'no')}
@@ -54,6 +64,15 @@ for(var i=0;i<evs.length;i++){
   for(var j=0;j<L.length;j++){if(L[j]>=tt){nx=L[j];break}}
   var dl=evs[i].querySelector('.dl');
   if(nx&&dl)dl.textContent=inDays(dn(nx)-dn(tt));
+}
+
+/* sports tiles */
+var sev=document.querySelectorAll('[data-ev]');
+for(var k=0;k<sev.length;k++){
+  var pp=sev[k].getAttribute('data-ev').split('|'),tk=today(),dk=sev[k].querySelector('.dl');
+  if(!dk)continue;
+  var s0=pp[0],e0=pp[1]||pp[0];
+  dk.textContent=e0<tk?'finished':(s0<=tk?'on now':inDays(dn(s0)-dn(tk)));
 }
 
 /* home: pick country + live card */
