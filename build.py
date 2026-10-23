@@ -245,7 +245,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 <body data-ga="{esc(GA_ID)}">
 <header class="site"><div class="hd">
 <a class="logo" href="/">{LOGO}{esc(SITE_NAME)}</a>
-<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/sports/">Sports</a><a class="hide-s" href="/mass-events/">Mass events</a><a class="hide-s" href="/days-until/">Days until</a>
+<nav><a href="/holidays/">Countries</a><a class="hide-s" href="/regions/">Regions</a><a class="hide-s" href="/holidays/world/">By month</a><a class="hide-s" href="/sports/">Sports</a><a class="hide-s" href="/mass-events/">Mass sport</a><a class="hide-s" href="/days-until/">Days until</a>
 <button id="theme" type="button" aria-label="Switch between light and dark mode" title="Light / dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"/></svg></button></nav>
 </div></header>
 <main>
@@ -254,7 +254,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 </main>
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
-<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/sports/">Sports countdowns</a><br><a href="/mass-events/">Mass-participation events</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/sports/">Sports countdowns</a><br><a href="/mass-events/">Mass sport</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
 <p>© {YEAR} {esc(SITE_NAME)} · operated by {esc(OWNER)}</p>
 </footer>
 <div id="cc" class="cc" role="dialog" aria-live="polite" aria-label="Cookie choices" hidden>
@@ -857,7 +857,7 @@ def build_indexes(countries, named, monthday, holiday_counts):
 <h2>Sports countdowns</h2>
 <ul class="tiles ev">{sports_tiles}</ul>
 <p><a href="/sports/">All sports events: Olympics, World Cups, Tour de France and more →</a></p>
-<h2>Events you can enter</h2>
+<h2>Mass sport: events you can enter</h2>
 <ul class="tiles ev">{mass_tiles}</ul>
 <p><a href="/mass-events/">Marathons, gran fondos, L'Étape du Tour and ski marathons →</a></p>
 <h2>How {esc(SITE_NAME)} works</h2>
@@ -894,7 +894,7 @@ MASS_UPCOMING = []     # mass-participation editions for the home page, soonest 
 
 SECTIONS = {
     "sports": {"path": "/sports/", "label": "Sports", "all": "All sports countdowns"},
-    "mass-events": {"path": "/mass-events/", "label": "Mass events", "all": "All mass-participation events"},
+    "mass-events": {"path": "/mass-events/", "label": "Mass sport", "all": "All mass sport events"},
 }
 
 
@@ -987,7 +987,7 @@ def sp_hub(sec, picked, today):
         faq = faq_html([
             ("How do I enter these events?", "Many of the biggest events use a ballot or lottery, some need a qualifying time, and some sell out within minutes. Where the entry dates are known, they are on the event page. Always enter through the official website of the organiser."),
         ] + common)
-        body = f"""<h1>Mass-participation events</h1>
+        body = f"""<h1>Mass sport: events you can enter</h1>
 <p>The big events you can enter yourself: cycling sportives such as the Maratona dles Dolomites and L'Étape du Tour, the World Marathon Majors, ultramarathons and ski marathons. Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
 <p class="mut">Looking for the pro races? See the <a href="/sports/">sports countdowns</a>.</p>
 <h2>Coming up next</h2>
@@ -995,14 +995,14 @@ def sp_hub(sec, picked, today):
 {groups}
 {faq}
 <p class="mut"><strong>Dates may change.</strong> Check the official website of each event before you book travel or enter.</p>"""
-        add("/mass-events/", layout("/mass-events/", "Mass-Participation Events: Marathons, Gran Fondos and Ski Marathons",
-                                    "Live countdowns to the big events you can enter: L'Étape du Tour, Maratona dles Dolomites, the World Marathon Majors, Comrades, Vasaloppet and more.",
+        add("/mass-events/", layout("/mass-events/", "Mass Sport: Marathons, Gran Fondos and Ski Marathons with Countdowns",
+                                    "Mass sport countdowns: the big events you can enter yourself, such as L'Étape du Tour, Maratona dles Dolomites, the World Marathon Majors, Comrades, Vasaloppet and Tartu Maraton.",
                                     body, None, [("Home", "/")]))
     else:
         faq = faq_html(common)
         body = f"""<h1>Sports countdowns</h1>
 <p>How many days until the next Olympic Games, the football World Cup, the Tour de France or the cycling World Championships? Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
-<p class="mut">Want to take part yourself? See the <a href="/mass-events/">mass-participation events</a>: marathons, gran fondos and ski marathons.</p>
+<p class="mut">Want to take part yourself? See <a href="/mass-events/">mass sport</a>: marathons, gran fondos and ski marathons.</p>
 <h2>Coming up next</h2>
 <ul class="tiles ev">{soon}</ul>
 {groups}
