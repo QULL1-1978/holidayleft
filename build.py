@@ -1017,6 +1017,7 @@ def build_sports():
 <div class="tw"><table><tr><th>Edition</th><th>Dates</th><th>Place</th><th>Status</th></tr>{rows}</table></div>
 {rel_html}
 {faq}
+<p class="mut"><strong>Dates may change.</strong> Check the official website of the event before you book travel or buy tickets.</p>
 <p><a href="/sports/">All sports countdowns</a> · <a href="/days-until/">Days until holidays and any date</a></p>"""
         title = fit_title(f"{name} {a.year}: Date and Days Left", f"{name}: Days Left")
         desc = f"{name} {ed['name']}: {rng}. Live countdown in days, plus location, length and whether the dates are confirmed."
@@ -1041,7 +1042,8 @@ def build_sports():
 <h2>Coming up next</h2>
 <ul class="tiles ev">{soon}</ul>
 {groups}
-{faq}"""
+{faq}
+<p class="mut"><strong>Dates may change.</strong> Check the official website of each event before you book travel or buy tickets.</p>"""
     add("/sports/", layout("/sports/", "Sports Countdowns: Olympics, World Cups, Tour de France and More",
                            "Live countdowns to the Olympic Games, football World Cups, Grand Slams, the Tour de France, the cycling Monuments and the UCI World Championships.",
                            body, None, [("Home", "/")]))
