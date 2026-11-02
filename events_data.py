@@ -1,4 +1,4 @@
-"""Curated calendar of global sports events (dates checked 2026-10-23 against the sources listed).
+"""Curated calendar of global sports events (dates checked 2026-11-02 against the sources listed).
 
 status: "confirmed" = organiser or governing body has published the dates;
         "provisional" = dates reported but still to be confirmed or reported with conflicting dates.
@@ -7,7 +7,7 @@ Maintenance: when an edition has finished, add the next one (the build prints a 
 series without a future edition).
 """
 
-CHECKED = "2026-10-23"
+CHECKED = "2026-11-02"
 
 CATEGORIES = [
     ("multi", "Olympic and multi-sport Games", "🏅"),
@@ -124,9 +124,9 @@ EVENTS = [
                    "note": "The route was presented on 22 October 2026."}]},
     {"slug": "tour-de-france-femmes", "name": "Tour de France Femmes", "cat": "tours",
      "about": "The Tour de France Femmes avec Zwift is the women's Tour de France, relaunched in 2022. The 2027 race starts in Leeds.",
-     "editions": [{"name": "2027 (starts in Leeds)", "start": "2027-07-30", "end": "", "place": "Leeds, United Kingdom", "status": S,
-                   "source": "https://www.merthyr.gov.uk/news-and-events/latest-news/cardiff-to-host-final-uk-stage-of-2027-tour-de-france",
-                   "note": "The start is reported for 30 July; the finish date is still to be confirmed."}]},
+     "editions": [{"name": "2027 (Leeds to Puy de Dôme)", "start": "2027-07-30", "end": "2027-08-07", "place": "Leeds, United Kingdom to Puy de Dôme, France", "status": C,
+                   "source": "https://www.letourfemmes.fr/en/news/2026/discover-on-22-october-the-route-of-the-2027-tour-de-france-femmes-avec-zwift/1302620",
+                   "note": "Nine stages, presented on 22 October 2026. The race starts in Leeds on Friday 30 July and finishes on the Puy de Dôme on Saturday 7 August."}]},
     {"slug": "giro-d-italia", "name": "Giro d'Italia", "cat": "tours",
      "about": "The Giro d'Italia is the Italian Grand Tour, first held in 1909. The leader wears the pink jersey (maglia rosa). The 2027 race is reported to start in Trieste.",
      "editions": [{"name": "2027", "start": "2027-05-08", "end": "2027-05-30", "place": "Italy (start reported in Trieste)", "status": S,

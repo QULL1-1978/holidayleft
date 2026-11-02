@@ -1,7 +1,7 @@
 """Mass-participation events (rides, runs, ski marathons you can enter yourself).
 
 Shown in the separate /mass-events/ section. Same data format and rules as events_data.py.
-Dates checked 2026-10-23.
+Dates checked 2026-11-02.
 """
 
 S = "provisional"
@@ -17,13 +17,13 @@ EVENTS = [
     # ------------------------------------------------------------------ cycling
     {"slug": "etape-du-tour", "name": "L'Étape du Tour de France", "cat": "mass-ride", "see_also": ["tour-de-france"],
      "about": "L'Étape du Tour is the amateur cyclosportive held on a mountain stage of the Tour de France route. Thousands of riders tackle one of the Tour's hardest stages, usually in the Alps or the Pyrenees, on closed roads shortly before or after the professionals.",
-     "entry": "General public registration for 2027 opens on 2 November 2026 at 2:00 p.m. CET. Pre-registration is available through a free Tour de France Club account.",
+     "entry": "General public registration for 2027 was set to open on 2 November 2026 at 2:00 p.m. CET. Check the official website for remaining places.",
      "editions": [{"name": "2027 (35th edition)", "start": "2027-07-11", "end": "2027-07-11", "place": "France", "status": C,
                    "source": "https://www.letapedutourdefrance.com/en/news/a-new-adventure-awaits-you-in-2027/191",
                    "note": "Date from the organiser's website. Check the official route page for the start and finish towns."}]},
     {"slug": "maratona-dles-dolomites", "name": "Maratona dles Dolomites", "cat": "mass-ride",
      "about": "The Maratona dles Dolomites is one of the best-known cycling marathons in the world, ridden on the high mountain passes of the Dolomites in northern Italy. The 2027 edition is the 40th anniversary.",
-     "entry": "Places are allocated by lottery. For 2027 the sign-up window was reported as 14 October to 10 November 2026, with about 8,000 starting places.",
+     "entry": "Places are allocated by lottery. For 2027 the sign-up window was reported to run from 14 October to 10 November 2026, with about 8,000 starting places.",
      "editions": [{"name": "2027 (40th edition)", "start": "2027-07-04", "end": "2027-07-04", "place": "Dolomites, Italy", "status": C,
                    "source": "https://www.tour-magazin.de/en/event/everyman-race/maratona-dles-dolomites-2027-cycling-marathon-celebrates-its-40th-edition/"}]},
     {"slug": "cape-town-cycle-tour", "name": "Cape Town Cycle Tour", "cat": "mass-ride",
@@ -37,7 +37,7 @@ EVENTS = [
                    "note": "Dates come from the 2027 route preview. The prologue starts in Somerset West and the finish is in Wellington."}]},
     {"slug": "unbound-gravel", "name": "Unbound Gravel", "cat": "mass-ride",
      "about": "Unbound Gravel is one of the most famous gravel races in the world, run on the gravel roads of the Flint Hills around Emporia, Kansas. The festival lasts several days, with the main race on Saturday.",
-     "entry": "Entry is by lottery. The official site said the 2027 lottery would open on 1 November.",
+     "entry": "Entry is by lottery. The 2027 lottery opened on 1 November 2026 on the official website.",
      "editions": [{"name": "2027", "start": "2027-06-03", "end": "2027-06-06", "place": "Emporia, Kansas, United States", "status": C,
                    "source": "https://unboundgravel.com/",
                    "note": "The festival runs 3–6 June 2027; the main gravel race day is Saturday 5 June."}]},
@@ -129,7 +129,7 @@ EVENTS = [
      "about": "The Tartu Maraton is a cross-country ski festival in southern Estonia and a member of the Worldloppet series of international ski marathons. The 2027 edition is the 53rd.",
      "entry": "Registration for 2027 was reported as open on the Worldloppet site. Use the official Tartu Maraton website to enter.",
      "editions": [{"name": "2027 (53rd edition)", "start": "2027-02-27", "end": "2027-02-28", "place": "Otepää to Elva, Estonia", "status": C,
-                   "source": "https://www.worldloppet.com/?p=34757",
+                   "source": "https://tartumaraton.ee/en/tartu-maraton-2027/race-regulations",
                    "note": "One week later than the usual weekend because the IBU Biathlon World Championships are held in Otepää then. Saturday 27 February: 31 km freestyle, Vintage and team relay. Sunday 28 February: 63 km and 31 km classic."}]},
     {"slug": "tartu-rattaralli", "name": "Tartu Rattaralli", "cat": "mass-ride",
      "about": "The Tartu Rattaralli is a road cycling event in Tartu, Estonia, with a children's ride the day before the main day. It has been a qualifier for the UCI Gran Fondo World Series. The 2026 edition was the 45th, with 135, 61 and 27 km routes.",
