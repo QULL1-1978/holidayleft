@@ -1021,7 +1021,8 @@ def build_sports():
     for ev in EVD.EVENTS:
         ed = sp_pick(ev, today)
         if ed is None:
-            print("WARNING: no upcoming edition for", ev["slug"])
+            print("HIDDEN (no upcoming edition, page not published):", ev["slug"])
+            continue
         picked.append((ev, ed))
     up = [(ev, ed) for ev, ed in picked if ed and _d(ed["start"]) >= today]
     up.sort(key=lambda x: x[1]["start"])
@@ -1035,11 +1036,6 @@ def build_sports():
         path = sp_path(ev)
         cat_title = cats[ev["cat"]][1]
         crumbs = [("Home", "/"), (sec_info["label"], sec_info["path"]), (name, path)]
-        if ed is None:
-            body = (f"<h1>How many days until {esc(name)}?</h1><p>We have no upcoming edition listed yet. "
-                    f"The next dates will be added when they are announced.</p>")
-            add(path, layout(path, f"{name}: next dates", f"Dates of the next {name}.", body, None, crumbs))
-            continue
         a, b = _d(ed["start"]), _d(ed["end"] or ed["start"])
         state, n = sp_countdown(ed, today)
         unit = "day" if n == 1 else "days"
