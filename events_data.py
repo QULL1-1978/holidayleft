@@ -17,11 +17,13 @@ CATEGORIES = [
     ("tours", "Cycling: Grand Tours", "🚴"),
     ("monuments", "Cycling: the five Monuments", "🏔️"),
     ("uci", "Cycling: UCI World Championships", "🌈"),
+    ("uec", "Cycling: European Championships", "🏆"),
 ]
 
 S = "provisional"
 C = "confirmed"
 UCI_CAL = "https://www.uci.org/pressrelease/discover-the-calendar-for-the-2027-uci-cycling-world-championships-in-haute-savoie-mont-blanc/1tEIUtEoRq13aaef4p3bdx"
+UEC_CAL = "https://www.uec.ch/"
 WT27 = "https://www.domestiquecycling.com/en/2027-uci-worldtour-calendar/"
 
 EVENTS = [
@@ -186,6 +188,30 @@ EVENTS = [
     {"slug": "uci-indoor-cycling-world-championships", "name": "UCI Indoor Cycling World Championships", "cat": "uci",
      "about": "The Indoor Cycling World Championships include artistic cycling and cycle-ball. In 2027 they are held in La Roche-sur-Foron as part of the Super Worlds.",
      "editions": [{"name": "La Roche-sur-Foron 2027", "start": "2027-09-03", "end": "2027-09-05", "place": "La Roche-sur-Foron, France", "status": C, "source": UCI_CAL}]},
+    # ------------------------------------------------------------------ cycling: UEC European Championships
+    {"slug": "uec-road-european-championships", "name": "UEC Road European Championships", "cat": "uec",
+     "see_also": ["uci-road-world-championships"],
+     "about": "The UEC Road European Championships decide the European champions in the road race and the time trial for elite, under-23 and junior riders, and include a mixed team relay. In 2027 they return to Denmark, with the time trials in Silkeborg and the road races in Herning.",
+     "editions": [{"name": "Denmark 2027", "start": "2027-09-28", "end": "2027-10-03", "place": "Silkeborg and Herning, Denmark", "status": C,
+                   "source": "https://www.uec.ch/en/actu/406/uec-road-european-championships-return-to-denmark-in-2027",
+                   "note": "The European Cycling Union awarded the 2027 edition to Denmark in November 2026. The day of each race had not been published yet."}]},
+    {"slug": "uec-track-european-championships", "name": "UEC Track European Championships", "cat": "uec",
+     "see_also": ["uci-track-world-championships"],
+     "about": "The UEC Track Elite European Championships are the main European track cycling event of the winter, with sprint, keirin, team pursuit, omnium, madison and other events for men and women.",
+     "editions": [{"name": "Berlin 2027", "start": "2027-02-10", "end": "2027-02-14", "place": "Berlin, Germany", "status": C, "source": UEC_CAL}]},
+    {"slug": "uec-mtb-european-championships", "name": "UEC Mountain Bike European Championships", "cat": "uec",
+     "see_also": ["uci-mtb-xco-world-championships"],
+     "about": "The UEC Mountain Bike European Championships are the main European mountain bike championships. In 2027 they are held in Gothenburg, Sweden.",
+     "editions": [{"name": "Gothenburg 2027", "start": "2027-08-03", "end": "2027-08-08", "place": "Gothenburg, Sweden", "status": C, "source": UEC_CAL}]},
+    {"slug": "uec-gravel-european-championships", "name": "UEC Gravel European Championships", "cat": "uec",
+     "see_also": ["uci-gravel-world-championships"],
+     "about": "The UEC Gravel European Championships are one of the newest European cycling titles, raced on mixed gravel and forest roads. In 2027 they are held in Lahti, Finland.",
+     "editions": [{"name": "Lahti 2027", "start": "2027-07-31", "end": "2027-08-01", "place": "Lahti, Finland", "status": S, "source": UEC_CAL,
+                   "note": "The UEC calendar lists 31 July to 1 August, while one event listing starts the programme on 30 July."}]},
+    {"slug": "uec-bmx-racing-european-championships", "name": "UEC BMX Racing European Championships", "cat": "uec",
+     "see_also": ["uci-bmx-racing-world-championships"],
+     "about": "The UEC BMX Racing European Championships decide the European champions in BMX racing for elite and junior riders. In 2027 they are held in Heusden-Zolder, Belgium.",
+     "editions": [{"name": "Heusden-Zolder 2027", "start": "2027-07-09", "end": "2027-07-11", "place": "Heusden-Zolder, Belgium", "status": C, "source": UEC_CAL}]},
 ]
 
 
@@ -198,3 +224,10 @@ EVENTS.extend(_MASS_EVENTS)
 for _e in EVENTS:
     if _e["slug"] == "tour-de-france":
         _e["see_also"] = ["etape-du-tour"]
+
+# European Championships pages link to the matching world championships; link back the other way too
+_by_slug = {_e["slug"]: _e for _e in EVENTS}
+for _e in EVENTS:
+    if _e["cat"] == "uec":
+        for _x in _e.get("see_also", []):
+            _by_slug[_x].setdefault("see_also", []).append(_e["slug"])
