@@ -1152,7 +1152,8 @@ def build_sports():
                         "".join(sp_tile(r, rd, today) for r, rd in rel[:8]) + "</ul>")
         other = SECTIONS["mass-events" if sec == "sports" else "sports"]
         cal_link = f' · <a href="/sports/calendar-{a.year}/">Sports calendar {a.year}</a>' if a.year in CAL_YEARS else ""
-        body = f"""<h1>How many days until the {esc(name)}?</h1>
+        question = ev.get("question") or f"How many days until the {name}?"
+        body = f"""<h1>{esc(question)}</h1>
 {cd}
 {facts}
 {status_line}

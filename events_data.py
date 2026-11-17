@@ -23,6 +23,7 @@ CATEGORIES = [
     ("golf", "Golf", "⛳"),
     ("athletics", "Athletics and swimming", "🏊"),
     ("winter", "Winter sports", "⛷️"),
+    ("combat", "Boxing, MMA, judo, wrestling and combat sports", "🥊"),
     ("horse", "Horse racing", "🏇"),
     ("other", "Snooker, darts, sailing and rowing", "🎯"),
     ("mind", "Chess and bridge", "♟️"),
@@ -289,6 +290,6 @@ TOP = [
     "formula-1-season", "monaco-grand-prix", "le-mans-24-hours", "world-athletics-championships",
     "world-aquatics-championships", "basketball-world-cup", "iihf-world-championship", "fivb-mens-volleyball-world-cup",
     "handball-world-championship", "kentucky-derby", "melbourne-cup", "ncaa-final-four", "world-snooker-championship",
-    "pdc-world-darts-championship", "grand-national", "americas-cup", "world-chess-championship",
-    "chess-olympiad", "counter-strike-major", "valorant-champions", "london-marathon", "new-york-city-marathon",
+    "pdc-world-darts-championship", "grand-national", "americas-cup", "world-chess-championship", "fury-vs-joshua",
+    "ufc-numbered-events", "chess-olympiad", "counter-strike-major", "valorant-champions", "london-marathon", "new-york-city-marathon",
 ]
