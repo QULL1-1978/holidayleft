@@ -24,7 +24,9 @@ CATEGORIES = [
     ("athletics", "Athletics and swimming", "🏊"),
     ("winter", "Winter sports", "⛷️"),
     ("horse", "Horse racing", "🏇"),
-    ("other", "Snooker, darts, chess, sailing, rowing and esports", "🎯"),
+    ("other", "Snooker, darts, sailing and rowing", "🎯"),
+    ("mind", "Chess and bridge", "♟️"),
+    ("esports", "Esports", "🎮"),
     ("tours", "Cycling: Grand Tours", "🚴"),
     ("monuments", "Cycling: the five Monuments", "🏔️"),
     ("uci", "Cycling: UCI World Championships", "🌈"),
@@ -287,5 +289,6 @@ TOP = [
     "formula-1-season", "monaco-grand-prix", "le-mans-24-hours", "world-athletics-championships",
     "world-aquatics-championships", "basketball-world-cup", "iihf-world-championship", "fivb-mens-volleyball-world-cup",
     "handball-world-championship", "kentucky-derby", "melbourne-cup", "ncaa-final-four", "world-snooker-championship",
-    "pdc-world-darts-championship", "grand-national", "americas-cup", "london-marathon", "new-york-city-marathon",
+    "pdc-world-darts-championship", "grand-national", "americas-cup", "world-chess-championship",
+    "chess-olympiad", "counter-strike-major", "valorant-champions", "london-marathon", "new-york-city-marathon",
 ]
