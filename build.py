@@ -1009,7 +1009,7 @@ def sp_hub(sec, picked, today):
 {faq}
 <p class="mut"><strong>Dates may change.</strong> Check the official website of each event before you book travel or buy tickets.</p>"""
         add("/sports/", layout("/sports/", "Sports Countdowns: Olympics, World Cups, Tour de France and More",
-                               "Live countdowns to the Olympic Games, football World Cups, Grand Slams, the Tour de France, the cycling Monuments and the UCI World Championships.",
+                               "Live countdowns to the Olympic Games, football World Cups, Grand Slams, the Tour de France, the cycling Monuments and the cycling World and European Championships.",
                                body, None, [("Home", "/")]))
 
 

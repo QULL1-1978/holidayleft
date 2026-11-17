@@ -24,6 +24,7 @@ S = "provisional"
 C = "confirmed"
 UCI_CAL = "https://www.uci.org/pressrelease/discover-the-calendar-for-the-2027-uci-cycling-world-championships-in-haute-savoie-mont-blanc/1tEIUtEoRq13aaef4p3bdx"
 UEC_CAL = "https://www.uec.ch/"
+UEC_PDF = "https://www.uec.ch/resources/2026%20Events/UEC_calendar_events_2026_2032_v30.10.2026.pdf"
 WT27 = "https://www.domestiquecycling.com/en/2027-uci-worldtour-calendar/"
 
 EVENTS = [
@@ -188,6 +189,19 @@ EVENTS = [
     {"slug": "uci-indoor-cycling-world-championships", "name": "UCI Indoor Cycling World Championships", "cat": "uci",
      "about": "The Indoor Cycling World Championships include artistic cycling and cycle-ball. In 2027 they are held in La Roche-sur-Foron as part of the Super Worlds.",
      "editions": [{"name": "La Roche-sur-Foron 2027", "start": "2027-09-03", "end": "2027-09-05", "place": "La Roche-sur-Foron, France", "status": C, "source": UCI_CAL}]},
+    {"slug": "uci-bmx-freestyle-world-championships", "name": "UCI BMX Freestyle World Championships", "cat": "uci",
+     "about": "The BMX Freestyle World Championships decide the world champions in BMX park and flatland. In 2027 both are held in Cluses as part of the Super Worlds in Haute-Savoie.",
+     "editions": [{"name": "Cluses 2027", "start": "2027-08-26", "end": "2027-09-04", "place": "Cluses, France", "status": C, "source": UCI_CAL,
+                   "note": "The flatland finals are on 26 August and the park finals on 4 September."}]},
+    {"slug": "uci-trials-world-championships", "name": "UCI Trials World Championships", "cat": "uci",
+     "about": "The Trials World Championships decide the world champions in bike trials, where riders cross obstacles without putting a foot down. In 2027 they are held in Sallanches as part of the Super Worlds.",
+     "editions": [{"name": "Sallanches 2027", "start": "2027-08-30", "end": "2027-09-03", "place": "Sallanches, France", "status": C, "source": UCI_CAL}]},
+    {"slug": "uci-para-cycling-track-world-championships", "name": "UCI Para-cycling Track World Championships", "cat": "uci",
+     "about": "The Para-cycling Track World Championships decide the world champions in para-cycling on the track. In 2027 they are held at the national velodrome in Saint-Quentin-en-Yvelines as part of the Super Worlds.",
+     "editions": [{"name": "Saint-Quentin-en-Yvelines 2027", "start": "2027-09-01", "end": "2027-09-05", "place": "Saint-Quentin-en-Yvelines, France", "status": C, "source": UCI_CAL}]},
+    {"slug": "uci-cycling-esports-world-championships", "name": "UCI Cycling Esports World Championships", "cat": "uci",
+     "about": "The Cycling Esports World Championships are raced on smart trainers in a virtual world. In 2027 they are held in Évian as part of the Super Worlds.",
+     "editions": [{"name": "Évian 2027", "start": "2027-08-31", "end": "2027-09-01", "place": "Évian-les-Bains, France", "status": C, "source": UCI_CAL}]},
     # ------------------------------------------------------------------ cycling: UEC European Championships
     {"slug": "uec-road-european-championships", "name": "UEC Road European Championships", "cat": "uec",
      "see_also": ["uci-road-world-championships"],
@@ -206,8 +220,19 @@ EVENTS = [
     {"slug": "uec-gravel-european-championships", "name": "UEC Gravel European Championships", "cat": "uec",
      "see_also": ["uci-gravel-world-championships"],
      "about": "The UEC Gravel European Championships are one of the newest European cycling titles, raced on mixed gravel and forest roads. In 2027 they are held in Lahti, Finland.",
-     "editions": [{"name": "Lahti 2027", "start": "2027-07-31", "end": "2027-08-01", "place": "Lahti, Finland", "status": S, "source": UEC_CAL,
-                   "note": "The UEC calendar lists 31 July to 1 August, while one event listing starts the programme on 30 July."}]},
+     "editions": [{"name": "Lahti 2027", "start": "2027-07-31", "end": "2027-08-01", "place": "Lahti, Finland", "status": C, "source": UEC_PDF}]},
+    {"slug": "uec-cyclo-cross-european-championships", "name": "UEC Cyclo-cross European Championships", "cat": "uec",
+     "see_also": ["uci-cyclo-cross-world-championships"],
+     "about": "The UEC Cyclo-cross European Championships decide the European champions in cyclo-cross for elite, under-23 and junior riders. They are held in early November, at the start of the winter season.",
+     "editions": [{"name": "2027", "start": "2027-11-05", "end": "2027-11-07", "place": "To be announced", "status": S, "source": UEC_PDF,
+                   "note": "The UEC calendar reserves 5–7 November 2027; the host had not been chosen yet."}]},
+    {"slug": "uec-mtb-marathon-european-championships", "name": "UEC MTB Marathon European Championships", "cat": "uec",
+     "about": "The UEC MTB Marathon European Championships decide the European champions in long-distance mountain biking for elite and masters riders. In 2027 they are held in Jerez de los Caballeros in Extremadura, Spain.",
+     "editions": [{"name": "Jerez de los Caballeros 2027", "start": "2027-05-16", "end": "2027-05-16", "place": "Jerez de los Caballeros, Spain", "status": C, "source": UEC_PDF}]},
+    {"slug": "uec-trials-european-championships", "name": "UEC Trials European Championships", "cat": "uec",
+     "see_also": ["uci-trials-world-championships"],
+     "about": "The UEC Trials European Championships decide the European champions in bike trials for junior and elite riders. In 2027 they are held in Vejle, Denmark.",
+     "editions": [{"name": "Vejle 2027", "start": "2027-08-06", "end": "2027-08-08", "place": "Vejle, Denmark", "status": C, "source": UEC_PDF}]},
     {"slug": "uec-bmx-racing-european-championships", "name": "UEC BMX Racing European Championships", "cat": "uec",
      "see_also": ["uci-bmx-racing-world-championships"],
      "about": "The UEC BMX Racing European Championships decide the European champions in BMX racing for elite and junior riders. In 2027 they are held in Heusden-Zolder, Belgium.",
