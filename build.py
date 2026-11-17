@@ -254,7 +254,7 @@ def layout(path, title, desc, body, data=None, crumbs=None):
 </main>
 <footer>
 <div class="fl-row"><div style="max-width:560px"><p><strong>{esc(SITE_NAME)}</strong><br>Public holiday data from <a href="https://date.nager.at" rel="noopener">Nager.Date</a>, refreshed daily. Dates can change at short notice, so check official government sources before you plan travel or business around them.</p></div>
-<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/sports/">Sports countdowns</a><br><a href="/mass-events/">Mass sport</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
+<p><a href="/holidays/">Countries</a><br><a href="/regions/">Regions</a><br><a href="/holidays/world/">Holidays by month</a><br><a href="/sports/">Sports countdowns</a><br><a href="/sports/calendar-{CAL_YEAR}/">Sports calendar {CAL_YEAR}</a><br><a href="/mass-events/">Mass sport</a><br><a href="/days-until/">Days until</a><br><a href="/faq/">FAQ</a><br><a href="/methodology/">How it works</a><br><a href="/about/">About</a>{CONTACT_LINK}<br><a href="/terms/">Terms</a><br><a href="/privacy/">Privacy</a><br><a href="#" id="cc-open">Cookie settings</a></p></div>
 <p>© {YEAR} {esc(SITE_NAME)} · operated by {esc(OWNER)}</p>
 </footer>
 <div id="cc" class="cc" role="dialog" aria-live="polite" aria-label="Cookie choices" hidden>
@@ -856,7 +856,7 @@ def build_indexes(countries, named, monthday, holiday_counts):
 <p><a href="/days-until/">See all countdowns, including any date of the year →</a></p>
 <h2>Sports countdowns</h2>
 <ul class="tiles ev">{sports_tiles}</ul>
-<p><a href="/sports/">All sports events: Olympics, World Cups, Tour de France and more →</a></p>
+<p><a href="/sports/">All sports events: Olympics, World Cups, Tour de France and more →</a> · <a href="/sports/calendar-{CAL_YEAR}/">Sports calendar {CAL_YEAR}</a></p>
 <h2>Mass sport: events you can enter</h2>
 <ul class="tiles ev">{mass_tiles}</ul>
 <p><a href="/mass-events/">Marathons, gran fondos, L'Étape du Tour and ski marathons →</a></p>
@@ -890,6 +890,8 @@ def build_indexes(countries, named, monthday, holiday_counts):
 
 
 SPORTS_UPCOMING = []   # sports editions for the home page, soonest first
+CAL_YEAR = YEAR if NOW_UTC.month < 10 else YEAR + 1   # sports calendar year linked from the footer and home page
+CAL_YEARS = []        # sports calendar pages that were built
 MASS_UPCOMING = []     # mass-participation editions for the home page, soonest first
 
 SECTIONS = {
@@ -978,6 +980,7 @@ def sp_hub(sec, picked, today):
         groups += (f"<h2>{emoji} {esc(ctitle)}</h2><ul class=\"tiles ev\">" +
                    "".join(sp_tile(r, rd, today) for r, rd in items) + "</ul>")
     checked = esc(fmt_date(_d(EVD.CHECKED), False))
+    cal_links = ", ".join(f'<a href="/sports/calendar-{y}/">sports calendar {y}</a>' for y in CAL_YEARS)
     common = [
         ("Where do the dates come from?", "From the organisers or governing bodies where they have published them, and otherwise from reliable media and event listings. Each event page links to its source and says whether the dates are confirmed or provisional."),
         ("How often are the dates updated?", f"The dates were last checked on {checked}. When an edition finishes, the next one is added, and the countdowns on the pages are calculated live in your browser."),
@@ -989,7 +992,7 @@ def sp_hub(sec, picked, today):
         ] + common)
         body = f"""<h1>Mass sport: events you can enter</h1>
 <p>The big events you can enter yourself: cycling sportives such as the Maratona dles Dolomites and L'Étape du Tour, the World Marathon Majors, ultramarathons and ski marathons. Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
-<p class="mut">Looking for the pro races? See the <a href="/sports/">sports countdowns</a>.</p>
+<p class="mut">Looking for the pro races? See the <a href="/sports/">sports countdowns</a>. All events by month: {cal_links}.</p>
 <h2>Coming up next</h2>
 <ul class="tiles ev">{soon}</ul>
 {groups}
@@ -1002,7 +1005,7 @@ def sp_hub(sec, picked, today):
         faq = faq_html(common)
         body = f"""<h1>Sports countdowns</h1>
 <p>How many days until the next Olympic Games, the football World Cup, the Champions League final, Wimbledon, the Masters, the Six Nations, the Ice Hockey World Championship or the Tour de France? Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
-<p class="mut">Want to take part yourself? See <a href="/mass-events/">mass sport</a>: marathons, gran fondos and ski marathons.</p>
+<p class="mut">All events by month: {cal_links}. Want to take part yourself? See <a href="/mass-events/">mass sport</a>: marathons, gran fondos and ski marathons.</p>
 <h2>Coming up next</h2>
 <ul class="tiles ev">{soon}</ul>
 {groups}
@@ -1011,6 +1014,65 @@ def sp_hub(sec, picked, today):
         add("/sports/", layout("/sports/", "Sports Countdowns: Olympics, World Cups, Tour de France and More",
                                "Live countdowns to the Olympics, football World Cups and club finals, Grand Slams, golf majors, Formula 1, ice hockey, handball, basketball, volleyball, winter sports and cycling.",
                                body, None, [("Home", "/")]))
+
+
+def sp_calendar(year, today):
+    """Month-by-month calendar of every edition in `year` that has not finished yet. -> True if built."""
+    cat_emoji = {c[0]: c[2] for c in EVD.CATEGORIES}
+    top = set(EVD.TOP)
+    rows = []
+    for ev in EVD.EVENTS:
+        for ed in ev["editions"]:
+            a, b = _d(ed["start"]), _d(ed["end"] or ed["start"])
+            if a.year == year and b >= today:
+                rows.append((ed["start"], ev, ed))
+    if len(rows) < 5:
+        return False
+    rows.sort(key=lambda x: (x[0], x[1]["name"]))
+    path = f"/sports/calendar-{year}/"
+    big = []
+    for _, ev, ed in rows:
+        if ev["slug"] in top and ev["slug"] not in [e["slug"] for e, _ in big]:
+            big.append((ev, ed))
+    big_html = ""
+    if big:
+        big_html = (f'<h2>The biggest events of {year}</h2><ul class="tiles ev">' +
+                    "".join(sp_tile(ev, ed, today) for ev, ed in big) + "</ul>")
+    months = ""
+    for m in range(1, 13):
+        mr = [(ev, ed) for st, ev, ed in rows if _d(st).month == m]
+        if not mr:
+            continue
+        trs = "".join(
+            f'<tr><td>{esc(sp_range(ed))}</td><td>{cat_emoji[ev["cat"]]} <a href="{sp_path(ev)}">{esc(ev["name"])}</a>'
+            f'{" <strong>★</strong>" if ev["slug"] in top else ""}</td><td>{esc(ed["place"])}</td><td>{sp_pill(ed)}</td></tr>'
+            for ev, ed in mr)
+        months += (f'<h2>{MONTHS[m - 1]} {year}</h2><div class="tw"><table><tr><th>Dates</th><th>Event</th>'
+                   f"<th>Place</th><th>Status</th></tr>{trs}</table></div>")
+    names = [ev["name"] for ev, _ in big]
+    faq = faq_html([
+        (f"What are the biggest sporting events in {year}?",
+         (", ".join(names[:-1]) + " and " + names[-1] + "." if len(names) > 1 else (names[0] + "." if names else
+          f"See the month-by-month list on this page."))),
+        (f"How many events are in this {year} sports calendar?",
+         f"{len(rows)} events and editions, from pro championships to mass-participation events you can enter yourself. Each one links to a page with a live countdown."),
+        ("Are these dates final?",
+         "Events marked confirmed have dates published by the organiser or governing body. Provisional dates can still change, so check the official website before you book travel or tickets."),
+    ])
+    other_years = " · ".join(f'<a href="/sports/calendar-{y}/">Sports calendar {y}</a>'
+                             for y in range(today.year, today.year + 3) if y != year)
+    body = f"""<h1>Sports calendar {year}: the biggest events month by month</h1>
+<p>All the big sporting events of {year} in one place: Olympic and multi-sport Games, football tournaments and club finals, tennis and golf majors, motorsport, ice hockey, handball, basketball and volleyball championships, winter sports, cycling, and the marathons and sportives you can enter yourself. The biggest events are marked with ★. Click an event for a live countdown.</p>
+{big_html}
+{months}
+{faq}
+<p class="mut"><strong>Dates may change.</strong> Check the official website of each event before you book travel or buy tickets.</p>
+<p><a href="/sports/">All sports countdowns</a> · <a href="/mass-events/">All mass sport events</a>{" · " + other_years if other_years else ""}</p>"""
+    title = f"Sports Calendar {year}: Biggest Sporting Events Month by Month"
+    desc = (f"The {year} sports calendar: dates of the biggest sporting events month by month, from football, tennis, golf and "
+            f"Formula 1 to cycling, winter sports and marathons, with live countdowns.")
+    add(path, layout(path, title, desc, body, None, [("Home", "/"), ("Sports", "/sports/"), (f"Calendar {year}", path)]))
+    return True
 
 
 def build_sports():
@@ -1028,6 +1090,9 @@ def build_sports():
     up.sort(key=lambda x: x[1]["start"])
     SPORTS_UPCOMING[:] = [x for x in up if sp_sec(x[0]) == "sports"]
     MASS_UPCOMING[:] = [x for x in up if sp_sec(x[0]) == "mass-events"]
+    for y in range(today.year, today.year + 3):
+        if sp_calendar(y, today):
+            CAL_YEARS.append(y)
 
     for ev, ed in picked:
         name, slug = ev["name"], ev["slug"]
@@ -1086,6 +1151,7 @@ def build_sports():
             rel_html = (f"<h2>More in {esc(cat_title)}</h2><ul class=\"tiles ev\">" +
                         "".join(sp_tile(r, rd, today) for r, rd in rel[:8]) + "</ul>")
         other = SECTIONS["mass-events" if sec == "sports" else "sports"]
+        cal_link = f' · <a href="/sports/calendar-{a.year}/">Sports calendar {a.year}</a>' if a.year in CAL_YEARS else ""
         body = f"""<h1>How many days until the {esc(name)}?</h1>
 {cd}
 {facts}
@@ -1099,7 +1165,7 @@ def build_sports():
 {rel_html}
 {faq}
 <p class="mut"><strong>Dates may change.</strong> Check the official website of the event before you book travel or buy tickets.</p>
-<p><a href="{sec_info["path"]}">{sec_info["all"]}</a> · <a href="{other["path"]}">{other["all"]}</a> · <a href="/days-until/">Days until holidays and any date</a></p>"""
+<p><a href="{sec_info["path"]}">{sec_info["all"]}</a> · <a href="{other["path"]}">{other["all"]}</a>{cal_link} · <a href="/days-until/">Days until holidays and any date</a></p>"""
         title = fit_title(f"{name} {a.year}: Date and Days Left", f"{name}: Days Left")
         desc = f"{name} {ed['name']}: {rng}. Live countdown in days, plus location, length and whether the dates are confirmed."
         add(path, layout(path, title, desc, body,

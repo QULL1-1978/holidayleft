@@ -275,3 +275,15 @@ for _e in EVENTS:
     if _e["cat"] == "uec":
         for _x in _e.get("see_also", []):
             _by_slug[_x].setdefault("see_also", []).append(_e["slug"])
+
+# The biggest events worldwide, highlighted in the sports calendars (slugs; unknown slugs are ignored)
+TOP = [
+    "summer-olympics", "winter-olympics", "summer-paralympics", "fifa-world-cup", "womens-world-cup", "uefa-euro",
+    "champions-league-final", "africa-cup-of-nations", "afc-asian-cup", "copa-america", "super-bowl",
+    "cricket-world-cup", "t20-world-cup", "indian-premier-league", "the-ashes", "rugby-world-cup", "six-nations",
+    "tour-de-france", "australian-open", "french-open", "wimbledon", "us-open-tennis", "the-masters", "ryder-cup",
+    "formula-1-season", "monaco-grand-prix", "le-mans-24-hours", "world-athletics-championships",
+    "world-aquatics-championships", "basketball-world-cup", "iihf-world-championship", "fivb-mens-volleyball-world-cup",
+    "handball-world-championship", "kentucky-derby", "melbourne-cup", "ncaa-final-four", "world-snooker-championship",
+    "pdc-world-darts-championship", "league-of-legends-worlds", "london-marathon", "new-york-city-marathon",
+]
