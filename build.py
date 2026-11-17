@@ -1001,7 +1001,7 @@ def sp_hub(sec, picked, today):
     else:
         faq = faq_html(common)
         body = f"""<h1>Sports countdowns</h1>
-<p>How many days until the next Olympic Games, the football World Cup, the Tour de France or the cycling World Championships? Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
+<p>How many days until the next Olympic Games, the football World Cup, the Champions League final, Wimbledon, the Masters, the Six Nations, the Ice Hockey World Championship or the Tour de France? Pick an event for a live countdown, the dates, the place and whether the dates are confirmed.</p>
 <p class="mut">Want to take part yourself? See <a href="/mass-events/">mass sport</a>: marathons, gran fondos and ski marathons.</p>
 <h2>Coming up next</h2>
 <ul class="tiles ev">{soon}</ul>
@@ -1009,7 +1009,7 @@ def sp_hub(sec, picked, today):
 {faq}
 <p class="mut"><strong>Dates may change.</strong> Check the official website of each event before you book travel or buy tickets.</p>"""
         add("/sports/", layout("/sports/", "Sports Countdowns: Olympics, World Cups, Tour de France and More",
-                               "Live countdowns to the Olympic Games, football World Cups, Grand Slams, the Tour de France, the cycling Monuments and the cycling World and European Championships.",
+                               "Live countdowns to the Olympics, football World Cups and club finals, Grand Slams, golf majors, Formula 1, ice hockey, handball, basketball, volleyball, winter sports and cycling.",
                                body, None, [("Home", "/")]))
 
 

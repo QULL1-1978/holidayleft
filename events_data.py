@@ -11,9 +11,18 @@ CHECKED = "2026-11-02"
 
 CATEGORIES = [
     ("multi", "Olympic and multi-sport Games", "🏅"),
-    ("football", "Football", "⚽"),
-    ("team", "Other team sports", "🏉"),
-    ("racket", "Tennis, motorsport and athletics", "🎾"),
+    ("football", "Football: national teams", "⚽"),
+    ("football-clubs", "Football: club competitions", "🏟️"),
+    ("basketball", "Basketball", "🏀"),
+    ("volleyball", "Volleyball", "🏐"),
+    ("ballgames", "Ice hockey, handball, floorball and other team sports", "🏒"),
+    ("team", "Rugby and cricket", "🏉"),
+    ("us", "American football and baseball", "🏈"),
+    ("racket", "Tennis, table tennis and badminton", "🎾"),
+    ("motor", "Motorsport", "🏎️"),
+    ("golf", "Golf", "⛳"),
+    ("athletics", "Athletics and swimming", "🏊"),
+    ("winter", "Winter sports", "⛷️"),
     ("tours", "Cycling: Grand Tours", "🚴"),
     ("monuments", "Cycling: the five Monuments", "🏔️"),
     ("uci", "Cycling: UCI World Championships", "🌈"),
@@ -68,7 +77,7 @@ EVENTS = [
      "about": "The men's European Championship is held every four years. Euro 2028 is co-hosted by England, Scotland, Wales and the Republic of Ireland, with the opener in Cardiff and the final at Wembley.",
      "editions": [{"name": "Euro 2028", "start": "2028-06-09", "end": "2028-07-09", "place": "United Kingdom and Ireland", "status": C,
                    "source": "https://en.wikipedia.org/wiki/UEFA_Euro_2028"}]},
-    {"slug": "champions-league-final", "name": "UEFA Champions League final", "cat": "football",
+    {"slug": "champions-league-final", "name": "UEFA Champions League final", "cat": "football-clubs",
      "about": "The Champions League final decides the champion club of Europe. The 2027 final is scheduled for the Metropolitano stadium in Madrid.",
      "editions": [{"name": "2027 final", "start": "2027-06-05", "end": "2027-06-05", "place": "Madrid, Spain", "status": C,
                    "source": "https://en.wikipedia.org/wiki/2027_UEFA_Champions_League_final"}]},
@@ -81,12 +90,12 @@ EVENTS = [
      "about": "The ICC Men's Cricket World Cup is the main one-day international tournament. The 2027 edition is co-hosted by South Africa, Zimbabwe and Namibia with 14 teams.",
      "editions": [{"name": "2027 (South Africa, Zimbabwe, Namibia)", "start": "2027-10-02", "end": "2027-11-21", "place": "South Africa, Zimbabwe and Namibia", "status": C,
                    "source": "https://www.icc-cricket.com/media-releases/icc-men-s-cricket-world-cup-2027-schedule-revealed-and-ballot-system-opens"}]},
-    {"slug": "basketball-world-cup", "name": "FIBA Basketball World Cup", "cat": "team",
+    {"slug": "basketball-world-cup", "name": "FIBA Basketball World Cup", "cat": "basketball",
      "about": "The FIBA Basketball World Cup is the world championship of national basketball teams. The 2027 edition is scheduled for Doha, Qatar, with 32 teams.",
      "editions": [{"name": "Qatar 2027", "start": "2027-08-27", "end": "2027-09-12", "place": "Doha, Qatar", "status": C,
                    "source": "https://en.wikipedia.org/wiki/2027_FIBA_Basketball_World_Cup",
                    "note": "FIBA has said it is planning as scheduled but could adjust dates if regional events require it."}]},
-    {"slug": "super-bowl", "name": "Super Bowl", "cat": "team",
+    {"slug": "super-bowl", "name": "Super Bowl", "cat": "us",
      "about": "The Super Bowl is the championship game of the NFL, played in February. Super Bowl LXI is set for SoFi Stadium in Inglewood, California.",
      "editions": [{"name": "Super Bowl LXI", "start": "2027-02-14", "end": "2027-02-14", "place": "Inglewood, California, United States", "status": C,
                    "source": "https://www.nfl.com/news/2026-27-national-football-league-important-dates"}]},
@@ -110,12 +119,12 @@ EVENTS = [
      "editions": [{"name": "2027", "start": "2027-08-29", "end": "2027-09-12", "place": "New York, United States", "status": S,
                    "source": "https://www.tennisnerd.net/?p=62689",
                    "note": "The WTA and ATP calendars both give 29 August to 12 September. The organiser had not published its own dates in the sources we checked."}]},
-    {"slug": "formula-1-season", "name": "Formula 1 season", "cat": "racket",
+    {"slug": "formula-1-season", "name": "Formula 1 season", "cat": "motor",
      "about": "The Formula 1 World Championship is the top level of single-seater racing. The 2027 calendar has 24 Grands Prix. Dates shown run from the opening race weekend to the final race weekend.",
      "editions": [{"name": "2027 season", "start": "2027-03-12", "end": "2027-12-12", "place": "Bahrain to Abu Dhabi", "status": C,
                    "source": "https://www.khaleejtimes.com/f1/2027-f1-calendar-announced-as-abu-dhabi-keeps-final-race",
                    "note": "The opening weekend in Bahrain is 12–14 March; the season ends in Abu Dhabi on 10–12 December. Organisers have said some Gulf dates could change."}]},
-    {"slug": "world-athletics-championships", "name": "World Athletics Championships", "cat": "racket",
+    {"slug": "world-athletics-championships", "name": "World Athletics Championships", "cat": "athletics",
      "about": "The World Athletics Championships are held every two years. Beijing hosts the 2027 edition at the National Stadium (the Bird's Nest).",
      "editions": [{"name": "Beijing 2027", "start": "2027-09-10", "end": "2027-09-19", "place": "Beijing, China", "status": C,
                    "source": "https://en.wikipedia.org/wiki/2027_World_Athletics_Championships",
@@ -248,7 +257,10 @@ EVENTS = [
 
 
 # Mass-participation events live in events_mass.py and are shown in the separate /mass-events/ section.
+from events_world import EVENTS as _WORLD_EVENTS  # noqa: E402
 from events_mass import CATEGORIES as _MASS_CATEGORIES, EVENTS as _MASS_EVENTS  # noqa: E402
+
+EVENTS.extend(_WORLD_EVENTS)
 
 CATEGORIES.extend(_MASS_CATEGORIES)
 EVENTS.extend(_MASS_EVENTS)
