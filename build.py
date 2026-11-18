@@ -20,6 +20,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import content as TXT
+import dates_data as DD
 import events_data as EVD
 
 ROOT = Path(__file__).parent
@@ -295,6 +296,24 @@ def easter(y):
     m = (a + 11 * h + 22 * l) // 451
     month, day = divmod(h + l - 7 * m + 114, 31)
     return dt.date(y, month, day + 1)
+
+
+def orthodox_easter(y):
+    """Orthodox Easter: Julian computus (Meeus) shifted to the Gregorian calendar (+13 days, valid 1900-2099)."""
+    a, b, c = y % 4, y % 7, y % 19
+    d = (19 * c + 15) % 30
+    e = (2 * a + 4 * b - d + 34) % 7
+    month, day = divmod(d + e + 114, 31)
+    return dt.date(y, month, day + 1) + dt.timedelta(days=13)
+
+
+# dates_data.EXTRA entries whose dates follow a calendar rule: slug -> year -> (date, note)
+RULES = {
+    "orthodox-easter": lambda y: (orthodox_easter(y), "same day" if orthodox_easter(y) == easter(y) else fmt_date(easter(y), False)),
+    "day-of-the-dead": lambda y: (dt.date(y, 11, 1), ""),
+    "perseids": lambda y: (dt.date(y, 8, 12), ""),
+    "geminids": lambda y: (dt.date(y, 12, 14), ""),
+}
 
 
 NAMED = [
@@ -742,9 +761,82 @@ def build_named():
                          f"{title} {nxt.year} is on {fmt_date(nxt)}. Live countdown in days and weeks.",
                          body, {"type": "until", "dates": [[d.isoformat(), title] for d in dates]},
                          [("Home", "/"), ("Days until", "/days-until/"), (title, path)]))
-        links.append((sl, title))
+        links.append((sl, title, "main"))
         NAMED_DATES[sl] = [d.isoformat() for d in dates]
+    for e in DD.EXTRA:
+        if build_extra(e, today):
+            links.append((e["slug"], e["name"], e["group"]))
     return links
+
+
+def extra_dates(e, today):
+    """[(date, note)] rows shown for a dates_data.EXTRA entry."""
+    if e["slug"] in RULES:
+        rows = [RULES[e["slug"]](y) for y in range(YEAR, YEAR + 4)]
+    else:
+        rows = [(dt.date.fromisoformat(d), n) for d, n in e["dates"]]
+    rows.sort(key=lambda r: r[0])
+    if e.get("upcoming_only"):
+        rows = [r for r in rows if r[0] >= today]
+    else:
+        rows = [r for r in rows if r[0].year >= YEAR]
+    return rows[:e.get("rows", 5)]
+
+
+def build_extra(e, today):
+    """Countdown page for a religious/cultural holiday or an astronomy event from dates_data.py."""
+    sl, name = e["slug"], e["name"]
+    rows = extra_dates(e, today)
+    upcoming = [r for r in rows if r[0] >= today]
+    if not upcoming:
+        print("HIDDEN (no upcoming date, page not published):", sl)
+        return False
+    if len(upcoming) < 2:
+        print("WARN: only one upcoming date left, add the next ones to dates_data.py:", sl)
+    nxt, note = upcoming[0]
+    days = (nxt - today).days
+
+    def fill(s):
+        return (s.replace("{next}", fmt_date(nxt)).replace("{year}", str(nxt.year))
+                .replace("{weekday}", WD[nxt.weekday()]).replace("{note}", note))
+
+    col = e.get("col")
+    head = "<tr><th>Year</th><th>Date</th>" + (f"<th>{esc(col)}</th>" if col else "") + "</tr>"
+    trs = "".join(f"<tr><td>{d.year}</td><td>{esc(fmt_date(d))}</td>" + (f"<td>{esc(n)}</td>" if col else "") + "</tr>"
+                  for d, n in rows)
+    srcs = ", ".join(f'<a href="{esc(u)}" rel="noopener">{esc(t)}</a>' for t, u in e.get("sources", []))
+    tnote = " ".join(x for x in (esc(e.get("table_note", "")), f"Source: {srcs}." if srcs else "") if x)
+    items = [(fill(q), esc(fill(a))) for q, a in e.get("faq", [])]
+    if e["group"] != "sky":
+        items.append((f"What day of the week is {e['sname']} in the coming years?",
+                      "; ".join(f"{d.year}: {WD[d.weekday()]}" for d, _ in rows) + "."))
+    items.append((f"How many days until {e['sname']}?",
+                  "The live countdown at the top of this page shows the days and weeks left. It is calculated from your device's date, so it is always current."))
+    others = [x for x in DD.EXTRA if x["group"] == e["group"] and x["slug"] != sl
+              and any(d >= today for d, _ in extra_dates(x, today))]   # skip pages that are not published
+    more = " · ".join(f'<a href="/days-until/{x["slug"]}/">{esc(x["name"])}</a>' for x in others)
+    gname = dict(DD.GROUPS)[e["group"]]
+    body = f"""<h1>{esc(e["h1"])}</h1>
+{until_block(days, fmt_date(nxt), wk_text(days))}
+<p>{esc(fill(e["lead"]))}</p>
+<h2>{esc(name)} dates</h2>
+<div class="tw"><table>{head}{trs}</table></div>
+{f'<p class="mut">{tnote}</p>' if tnote else ""}
+<h2>{esc(e.get("about_h") or "About " + e["sname"])}</h2><p>{esc(e["about"])}</p>
+{faq_html(items)}
+<h2>{esc(gname)}</h2>
+<p>{more}</p>
+<p><a href="/days-until/">More countdowns</a> · <a href="/holidays/">Public holidays by country</a></p>"""
+    path = f"/days-until/{sl}/"
+    tname = e["h1"].replace("How many days until ", "").rstrip("?")
+    title = fit_title(f"How Many Days Until {' '.join(w if w in ('of', 'the', 'al-Fitr', 'al-Adha') else w[0].upper() + w[1:] for w in tname.split())}? Countdown {nxt.year}",
+                      f"Days Until {name}? Countdown {nxt.year}")
+    add(path, layout(path, title, fill(e["desc"]), body,
+                     {"type": "until", "dates": [[d.isoformat(), name] for d, _ in rows]},
+                     [("Home", "/"), ("Days until", "/days-until/"), (name, path)]))
+    NAMED_DATES[sl] = [d.isoformat() for d, _ in rows]
+    EMOJI[sl] = e.get("emoji", "📅")
+    return True
 
 
 def build_monthday():
@@ -836,7 +928,11 @@ def build_indexes(countries, named, monthday, holiday_counts):
                 f'<span class="em">{EMOJI.get(sl, "📅")}</span><span class="t">{esc(t)}</span>'
                 f'<span class="dl">{txt}</span></a></li>')
 
-    pop = "".join(ev_tile(sl, t) for sl, t in named[:12])
+    def next_iso(sl):
+        return next((d for d in NAMED_DATES[sl] if d >= today.isoformat()), "9999")
+
+    soon = sorted(named, key=lambda x: next_iso(x[0]))[:12]   # the 12 soonest countdowns
+    pop = "".join(ev_tile(sl, t) for sl, t, _ in soon)
     sports_tiles = "".join(sp_tile(r, rd, today) for r, rd in SPORTS_UPCOMING[:8])
     mass_tiles = "".join(sp_tile(r, rd, today) for r, rd in MASS_UPCOMING[:4])
     flt = '<input type="search" id="cf" class="filter" placeholder="Filter countries…" aria-label="Filter countries">'
@@ -881,11 +977,13 @@ def build_indexes(countries, named, monthday, holiday_counts):
                              f"Public holiday calendars for {len(countries)} countries in {YEAR} and {YEAR + 1}.",
                              f"<h1>Public holidays by country</h1>{flt}<ul class=\"tiles\" id=\"clist\">{clist}</ul>", None,
                              [("Home", "/")]))
-    nl = "".join(ev_tile(sl, t) for sl, t in named)
+    groups = [("main", "Holidays and events")] + DD.GROUPS
+    hub = "".join(f'<h2>{esc(gt)}</h2><ul class="tiles ev">' + "".join(ev_tile(sl, t) for sl, t, g in named if g == gk) + "</ul>"
+                  for gk, gt in groups if any(g == gk for _, _, g in named))
     ml = "".join(f'<li><a href="/days-until/{sl}/">{esc(t)}</a></li>' for sl, t in monthday)
-    add("/days-until/", layout("/days-until/", "Days Until Countdowns: Holidays and Any Date",
-                               "How many days until Christmas, Easter, Halloween or any date of the year? Live countdowns in days and weeks.",
-                               f"<h1>Days until…</h1><h2>Holidays and events</h2><ul class=\"tiles ev\">{nl}</ul><h2>Any date</h2><ul class=\"grid\">{ml}</ul>",
+    add("/days-until/", layout("/days-until/", "Days Until Countdowns: Holidays, Eclipses and Any Date",
+                               "How many days until Christmas, Ramadan, Diwali, Chinese New Year, the next solar eclipse or any date of the year? Live countdowns in days and weeks.",
+                               f"<h1>Days until…</h1>{hub}<h2>Any date</h2><ul class=\"grid\">{ml}</ul>",
                                None, [("Home", "/")]))
 
 
