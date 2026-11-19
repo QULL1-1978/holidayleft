@@ -72,7 +72,7 @@ EMOJI = {
     "valentines-day": "💝", "st-patricks-day": "🍀", "easter": "🐣", "good-friday": "✝️",
     "easter-monday": "🌷", "april-fools-day": "🃏", "earth-day": "🌍", "mothers-day-us": "💐",
     "fathers-day-us": "👔", "memorial-day": "🎖️", "independence-day-us": "🎇", "labor-day-us": "🛠️",
-    "halloween": "🎃", "international-mens-day": "👨", "thanksgiving-us": "🦃", "black-friday": "🛍️", "cyber-monday": "💻",
+    "halloween": "🎃", "thanksgiving-us": "🦃", "black-friday": "🛍️", "cyber-monday": "💻",
     "summer-solstice": "☀️", "winter-solstice": "❄️",
 }
 NAMED_DATES = {}
@@ -334,13 +334,20 @@ NAMED = [
     ("independence-day-us", "Independence Day (US)", lambda y: dt.date(y, 7, 4), "Independence Day in the United States is on 4 July."),
     ("labor-day-us", "Labor Day (US)", lambda y: nth_weekday(y, 9, 0, 1), "Labor Day in the US is the first Monday of September."),
     ("halloween", "Halloween", lambda y: dt.date(y, 10, 31), "Halloween is on 31 October."),
-    ("international-mens-day", "International Men's Day", lambda y: dt.date(y, 11, 19), "International Men's Day is on 19 November."),
     ("thanksgiving-us", "Thanksgiving (US)", lambda y: nth_weekday(y, 11, 3, 4), "US Thanksgiving is the fourth Thursday of November."),
     ("black-friday", "Black Friday", lambda y: nth_weekday(y, 11, 3, 4) + dt.timedelta(days=1), "Black Friday is the day after US Thanksgiving."),
     ("cyber-monday", "Cyber Monday", lambda y: nth_weekday(y, 11, 3, 4) + dt.timedelta(days=4), "Cyber Monday is the Monday after US Thanksgiving."),
     ("summer-solstice", "Summer Solstice (northern hemisphere)", lambda y: dt.date(y, 6, 21), "The June solstice is around 21 June, the longest day in the northern hemisphere."),
     ("winter-solstice", "Winter Solstice (northern hemisphere)", lambda y: dt.date(y, 12, 21), "The December solstice is around 21 December, the shortest day in the northern hemisphere."),
 ]
+
+
+MONTH_NAMES = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September",
+               "October", "November", "December"]
+for _sl, _t, _mo, _d, _em in TXT.INTL_DAYS:
+    NAMED.append((_sl, _t, (lambda mo, d: lambda y: dt.date(y, mo, d))(_mo, _d), f"{_t} is on {_d} {MONTH_NAMES[_mo]}."))
+    EMOJI[_sl] = _em
+NAMED_GROUP = {x[0]: "intl" for x in TXT.INTL_DAYS}   # shown in their own group on /days-until/
 
 
 def next_on_or_after(dates, d):
@@ -720,7 +727,7 @@ def named_extra(sl, title, dates):
               "labor-day-us": "labour-day", "thanksgiving-us": "thanksgiving-day"}
     us_path = f"/days-until/united-states/{us_map[sl]}/" if sl in us_map else ""
     items = []
-    nxt = dates[0]
+    nxt = next((d for d in dates if d >= NOW_UTC.date()), dates[0])
     items.append((f"When is {title} in {nxt.year}?", f"{esc(title)} falls on {esc(fmt_date(nxt))}."))
     items.append((f"What day of the week is {title} in the coming years?",
                   "; ".join(f"{d.year}: {WD[d.weekday()]}" for d in dates) + "."))
@@ -736,7 +743,7 @@ def named_extra(sl, title, dates):
                       f'In the United States it is a public holiday; see <a href="{us_path}">the United States page</a>. In most other countries it is not.'))
     else:
         items.append((f"Is {title} a public holiday?",
-                      "In most countries it is not a public holiday but a day that people mark with traditions, events or shopping. Official days off are listed on each country's page."))
+                      "In most countries it is not a public holiday but a day that people mark with traditions, events, awareness campaigns or shopping. Official days off are listed on each country's page."))
     items.append(("Does the date change every year?",
                   "Fixed-date events such as 25 December stay on the same calendar date and only the weekday changes. Events defined by a weekday rule or by Easter move around, as the table above shows."))
     return out + faq_html(items)
@@ -762,7 +769,7 @@ def build_named():
                          f"{title} {nxt.year} is on {fmt_date(nxt)}. Live countdown in days and weeks.",
                          body, {"type": "until", "dates": [[d.isoformat(), title] for d in dates]},
                          [("Home", "/"), ("Days until", "/days-until/"), (title, path)]))
-        links.append((sl, title, "main"))
+        links.append((sl, title, NAMED_GROUP.get(sl, "main")))
         NAMED_DATES[sl] = [d.isoformat() for d in dates]
     for e in DD.EXTRA:
         if build_extra(e, today):
@@ -978,7 +985,7 @@ def build_indexes(countries, named, monthday, holiday_counts):
                              f"Public holiday calendars for {len(countries)} countries in {YEAR} and {YEAR + 1}.",
                              f"<h1>Public holidays by country</h1>{flt}<ul class=\"tiles\" id=\"clist\">{clist}</ul>", None,
                              [("Home", "/")]))
-    groups = [("main", "Holidays and events")] + DD.GROUPS
+    groups = [("main", "Holidays and events"), ("intl", "International and awareness days")] + DD.GROUPS
     hub = "".join(f'<h2>{esc(gt)}</h2><ul class="tiles ev">' + "".join(ev_tile(sl, t) for sl, t, g in named if g == gk) + "</ul>"
                   for gk, gt in groups if any(g == gk for _, _, g in named))
     ml = "".join(f'<li><a href="/days-until/{sl}/">{esc(t)}</a></li>' for sl, t in monthday)
