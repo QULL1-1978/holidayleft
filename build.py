@@ -72,7 +72,7 @@ EMOJI = {
     "valentines-day": "💝", "st-patricks-day": "🍀", "easter": "🐣", "good-friday": "✝️",
     "easter-monday": "🌷", "april-fools-day": "🃏", "earth-day": "🌍", "mothers-day-us": "💐",
     "fathers-day-us": "👔", "memorial-day": "🎖️", "independence-day-us": "🎇", "labor-day-us": "🛠️",
-    "halloween": "🎃", "thanksgiving-us": "🦃", "black-friday": "🛍️", "cyber-monday": "💻",
+    "halloween": "🎃", "international-mens-day": "👨", "thanksgiving-us": "🦃", "black-friday": "🛍️", "cyber-monday": "💻",
     "summer-solstice": "☀️", "winter-solstice": "❄️",
 }
 NAMED_DATES = {}
@@ -334,6 +334,7 @@ NAMED = [
     ("independence-day-us", "Independence Day (US)", lambda y: dt.date(y, 7, 4), "Independence Day in the United States is on 4 July."),
     ("labor-day-us", "Labor Day (US)", lambda y: nth_weekday(y, 9, 0, 1), "Labor Day in the US is the first Monday of September."),
     ("halloween", "Halloween", lambda y: dt.date(y, 10, 31), "Halloween is on 31 October."),
+    ("international-mens-day", "International Men's Day", lambda y: dt.date(y, 11, 19), "International Men's Day is on 19 November."),
     ("thanksgiving-us", "Thanksgiving (US)", lambda y: nth_weekday(y, 11, 3, 4), "US Thanksgiving is the fourth Thursday of November."),
     ("black-friday", "Black Friday", lambda y: nth_weekday(y, 11, 3, 4) + dt.timedelta(days=1), "Black Friday is the day after US Thanksgiving."),
     ("cyber-monday", "Cyber Monday", lambda y: nth_weekday(y, 11, 3, 4) + dt.timedelta(days=4), "Cyber Monday is the Monday after US Thanksgiving."),
